@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
+import { ServiceStatus } from '@/common/enum';
 
 describe('AppController', () => {
     let appController: AppController;
@@ -14,9 +15,7 @@ describe('AppController', () => {
         appController = app.get<AppController>(AppController);
     });
 
-    describe('root', () => {
-        it('should return "Hello World!"', () => {
-            expect(appController.getHello()).toBe('Hello World!');
-        });
+    it(`should return "${ServiceStatus.HEALTHY}"`, () => {
+        expect(appController.getHealth()).toBe(ServiceStatus.HEALTHY);
     });
 });
