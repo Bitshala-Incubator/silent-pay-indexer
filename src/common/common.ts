@@ -7,3 +7,9 @@ export const camelToSnakeCase = (inputString: string) => {
         .join('_')
         .toUpperCase();
 };
+
+export const extractPubKeyFromScript = (script: string): string | null => {
+    throw new Error(
+        `Not implemented! Cannot extract public key from script: ${script}`,
+    );
+};
