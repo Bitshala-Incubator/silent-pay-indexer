@@ -6,6 +6,12 @@
     "webpack": true,
     "webpackConfigPath": "webpack.config.js",
     "builder": "webpack",
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "assets": [
+      {
+        "include": "../config/*",
+        "outDir": "./dist/config"
+      }
+    ]
   }
 }

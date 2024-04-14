@@ -1,0 +1,7 @@
+db:
+  host: <host>
+  port: <port>
+  username: <username>
+  password: <password>
+  databaseName: silent-pay-indexer
+  synchronize: false
