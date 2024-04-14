@@ -30,7 +30,7 @@ jobs:
           key: node-modules-${{ hashFiles('package-lock.json') }}
       - name: Install Dependencies
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
-        run: npm install
+        run: npm install --legacy-peer-deps
       - name: Run prettier
         run: npm run format:check
       - name: Run eslint
