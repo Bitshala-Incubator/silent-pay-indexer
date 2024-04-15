@@ -30,7 +30,7 @@ import { DbConfig } from './dbConfiguration';
 
                 return {
                     type: 'postgres',
-                    ...dbConfig.db,
+                    ...dbConfig,
                     autoLoadEntities: true,
                 };
             },
