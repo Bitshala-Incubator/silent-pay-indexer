@@ -1,5 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { IndexTransactionCommand } from '@/commands/index-transaction.command';
+import { IndexTransactionCommand } from '@/commands/impl/index-transaction.command';
 
 @CommandHandler(IndexTransactionCommand)
 export class IndexTransactionHandler

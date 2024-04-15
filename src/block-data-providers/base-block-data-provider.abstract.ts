@@ -3,7 +3,7 @@ import {
     IndexTransactionCommand,
     TransactionInput,
     TransactionOutput,
-} from '@/commands/index-transaction.command';
+} from '@/commands/impl/index-transaction.command';
 
 export abstract class BaseBlockDataProvider {
     protected constructor(private readonly commandBus: CommandBus) {}
