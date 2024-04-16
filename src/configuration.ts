@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { load } from 'js-yaml';
 import { camelToSnakeCase } from '@/common/common';
 import { Config } from './configuration.model';
-import { validate } from 'class-validator';
+import { validateSync } from 'class-validator';
 import { plainToClass } from 'class-transformer';
 
 const getConfigFilePath = () => {
@@ -44,12 +44,17 @@ export default () => {
     >;
     mergeEnvVariablesRecursive(config);
 
-    validate(plainToClass(Config, config)).then((errors) => {
-        for (const error of errors) {
-            console.error(error.toString());
-        }
-
-        if (errors.length > 0) throw new Error('Invalid config');
+    const validateConfig = plainToClass(Config, config, {
+        enableImplicitConversion: true,
     });
+
+    const errors = validateSync(validateConfig, {
+        skipMissingProperties: true,
+    });
+
+    if (errors.length > 0) {
+        throw new Error(errors.toString());
+    }
+
     return config;
 };

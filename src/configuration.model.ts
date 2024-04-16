@@ -1,17 +1,17 @@
 import {
     IsBoolean,
     IsDefined,
-    IsNumber,
+    IsInt,
+    IsNotEmpty,
     IsString,
     Max,
     Min,
-    MinLength,
     ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class DbConfig {
-    @MinLength(1, {
+    @IsNotEmpty({
         message: 'Host length should at least be 1',
     })
     @IsString({
@@ -19,14 +19,9 @@ class DbConfig {
     })
     host: string;
 
-    @IsNumber(
-        {
-            allowNaN: false,
-        },
-        {
-            message: 'Port should be a number',
-        },
-    )
+    @IsInt({
+        message: 'Port should be a number',
+    })
     @Min(0, {
         message: 'Port should at least be 0',
     })
@@ -35,15 +30,27 @@ class DbConfig {
     })
     port: number;
 
-    @MinLength(1, {
+    @IsNotEmpty({
         message: 'Username length should at least be 1',
+    })
+    @IsString({
+        message: 'Username should be a string',
     })
     username: string;
 
+    @IsNotEmpty({
+        message: 'Username length should at least be 1',
+    })
+    @IsString({
+        message: 'Username should be a string',
+    })
     password: string;
 
-    @MinLength(1, {
+    @IsNotEmpty({
         message: 'Database name length should at least be 1',
+    })
+    @IsString({
+        message: 'Database name should be a string',
     })
     databaseName: string;
 
