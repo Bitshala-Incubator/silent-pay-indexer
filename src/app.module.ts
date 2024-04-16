@@ -5,7 +5,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from '@/configuration';
 import { TransactionsModule } from '@/transactions/transactions.module';
-import { validate } from 'class-validator';
 
 @Module({
     imports: [
