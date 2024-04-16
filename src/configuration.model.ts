@@ -1,14 +1,16 @@
-import { ConfigService } from '@nestjs/config';
 import {
     IsBoolean,
+    IsDefined,
     IsNumber,
     IsString,
     Max,
     Min,
     MinLength,
+    ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
-export class DbConfig {
+class DbConfig {
     @MinLength(1, {
         message: 'Host length should at least be 1',
     })
@@ -49,19 +51,13 @@ export class DbConfig {
         message: 'Synchronize should be a boolean',
     })
     synchronize: boolean;
+}
 
-    constructor(configService: ConfigService) {
-        this.host = configService.get('db.host');
-        this.port = configService.get('db.port');
-        this.username = configService.get('db.username');
-        this.password = configService.get('db.password');
-        this.databaseName = configService.get('db.databaseName');
-        this.synchronize = configService.get('db.synchronize');
-    }
-
-    *[Symbol.iterator]() {
-        for (const key of Object.keys(this)) {
-            yield [key, this[key]];
-        }
-    }
+export class Config {
+    @IsDefined()
+    @ValidateNested({
+        message: 'Invalid db config',
+    })
+    @Type(() => DbConfig)
+    db: DbConfig;
 }
