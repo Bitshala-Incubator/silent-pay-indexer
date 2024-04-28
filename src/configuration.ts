@@ -2,6 +2,9 @@ import { join } from 'path';
 import { readFileSync } from 'fs';
 import { load } from 'js-yaml';
 import { camelToSnakeCase } from '@/common/common';
+import { Config } from '@/configuration.model';
+import { validateSync } from 'class-validator';
+import { plainToClass } from 'class-transformer';
 
 const getConfigFilePath = () => {
     switch (process.env.NODE_ENV) {
@@ -40,5 +43,18 @@ export default () => {
         any
     >;
     mergeEnvVariablesRecursive(config);
+
+    const validateConfig = plainToClass(Config, config, {
+        enableImplicitConversion: true,
+    });
+
+    const errors = validateSync(validateConfig, {
+        skipMissingProperties: true,
+    });
+
+    if (errors.length > 0) {
+        throw new Error(errors.toString());
+    }
+
     return config;
 };
