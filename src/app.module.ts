@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from '@/configuration';
 import { TransactionsModule } from '@/transactions/transactions.module';
+import { commandHandlers } from '@/commands/handlers';
 
 @Module({
     imports: [
@@ -30,6 +31,6 @@ import { TransactionsModule } from '@/transactions/transactions.module';
         TransactionsModule,
     ],
     controllers: [AppController],
-    providers: [AppService],
+    providers: [AppService, ...commandHandlers],
 })
 export class AppModule {}
