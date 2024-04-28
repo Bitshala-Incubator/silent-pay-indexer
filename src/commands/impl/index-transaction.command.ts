@@ -16,7 +16,7 @@ export class IndexTransactionCommand {
         public readonly txid: string,
         public readonly vin: TransactionInput[],
         public readonly vout: TransactionOutput[],
-        private readonly blockHeight: number,
-        private readonly blockHash: string,
+        public readonly blockHeight: number,
+        public readonly blockHash: string,
     ) {}
 }
