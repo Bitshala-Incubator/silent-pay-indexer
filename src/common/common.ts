@@ -21,6 +21,15 @@ const hash160 = (buffer: Buffer): Buffer => {
     return createHash('ripemd160').update(sha256).digest();
 };
 
+export const createTaggedHash = (tag: string, buffer: Buffer): Buffer => {
+    const tagHash = createHash('sha256').update(tag, 'utf8').digest();
+    return createHash('sha256')
+        .update(tagHash)
+        .update(tagHash)
+        .update(buffer)
+        .digest();
+};
+
 export const extractPubKeyFromScript = (
     scriptPubKey: Buffer,
     scriptSig: Buffer,
