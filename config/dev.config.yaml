@@ -5,3 +5,5 @@ db:
   password: password
   databaseName: silent-pay-indexer
   synchronize: false
+app:
+  port: 3000

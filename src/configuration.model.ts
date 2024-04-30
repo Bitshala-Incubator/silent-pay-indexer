@@ -16,7 +16,7 @@ class DbConfig {
     host: string;
 
     @IsInt()
-    @Min(0)
+    @Min(1)
     @Max(65535)
     port: number;
 
@@ -36,9 +36,21 @@ class DbConfig {
     synchronize: boolean;
 }
 
+class AppConfig {
+    @IsInt()
+    @Min(1)
+    @Max(65535)
+    port: number;
+}
+
 export class Config {
     @IsDefined()
     @ValidateNested()
     @Type(() => DbConfig)
     db: DbConfig;
+
+    @IsDefined()
+    @ValidateNested()
+    @Type(() => AppConfig)
+    app: AppConfig;
 }
