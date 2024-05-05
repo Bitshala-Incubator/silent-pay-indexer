@@ -6,6 +6,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from '@/configuration';
 import { TransactionsModule } from '@/transactions/transactions.module';
 import { commandHandlers } from '@/commands/handlers';
+import { OperationStateModule } from '@/operation-state/operation-state.module';
 
 @Module({
     imports: [
@@ -29,6 +30,7 @@ import { commandHandlers } from '@/commands/handlers';
             }),
         }),
         TransactionsModule,
+        OperationStateModule,
     ],
     controllers: [AppController],
     providers: [AppService, ...commandHandlers],
