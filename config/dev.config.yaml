@@ -7,3 +7,10 @@ db:
   synchronize: true
 app:
   port: 3000
+provider: bitcoincore
+bitcoincore:
+  rpchost: 127.0.0.1
+  rpcpass: polarpass
+  network: regtest
+  rpcuser: polaruser
+  rpcport: 18445
