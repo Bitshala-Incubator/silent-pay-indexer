@@ -9,6 +9,7 @@ import {
     ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ProviderName } from '@/block-providers/providers/provider-utils';
 
 class DbConfig {
     @IsNotEmpty()
@@ -42,6 +43,27 @@ class AppConfig {
     @Max(65535)
     port: number;
 }
+export class BitcoinCoreConfig {
+    @IsNotEmpty()
+    @IsString()
+    rpchost: string;
+
+    @IsNotEmpty()
+    @IsString()
+    rpcpass: string;
+
+    @IsNotEmpty()
+    @IsString()
+    network: string;
+
+    @IsNotEmpty()
+    @IsString()
+    rpcuser: string;
+
+    @IsNotEmpty()
+    @IsString()
+    rpcport: string;
+}
 
 export class Config {
     @IsDefined()
@@ -53,4 +75,12 @@ export class Config {
     @ValidateNested()
     @Type(() => AppConfig)
     app: AppConfig;
+
+    @IsNotEmpty()
+    @IsString()
+    provider: ProviderName;
+
+    @ValidateNested()
+    @Type(() => BitcoinCoreConfig)
+    bitcoincore: BitcoinCoreConfig;
 }

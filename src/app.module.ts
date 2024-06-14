@@ -7,6 +7,20 @@ import configuration from '@/configuration';
 import { TransactionsModule } from '@/transactions/transactions.module';
 import { commandHandlers } from '@/commands/handlers';
 import { OperationStateModule } from '@/operation-state/operation-state.module';
+import { SchedulerService } from '@/block-providers/scheduler/scheduler.service';
+import { BitcoinCoreProvider } from '@/block-providers/providers/bitcoin-core/provider';
+import { PROVIDERS_INJECTION_TOKEN } from '@/block-providers/providers/provider-utils';
+import { Provider } from '@/block-providers/providers/provider';
+import { ScheduleModule } from '@nestjs/schedule';
+import { CqrsModule } from '@nestjs/cqrs';
+
+const blockProviders = [BitcoinCoreProvider];
+
+const GroupedBlockProviders = {
+    provide: PROVIDERS_INJECTION_TOKEN,
+    useFactory: (...args: Provider[]) => [...args],
+    inject: [...blockProviders],
+};
 
 @Module({
     imports: [
@@ -31,8 +45,16 @@ import { OperationStateModule } from '@/operation-state/operation-state.module';
         }),
         TransactionsModule,
         OperationStateModule,
+        ScheduleModule.forRoot(),
+        CqrsModule,
     ],
     controllers: [AppController],
-    providers: [AppService, ...commandHandlers],
+    providers: [
+        AppService,
+        ...commandHandlers,
+        SchedulerService,
+        ...blockProviders,
+        GroupedBlockProviders,
+    ],
 })
 export class AppModule {}

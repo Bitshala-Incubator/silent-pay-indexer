@@ -35,6 +35,8 @@
     "@nestjs/swagger": "^7.3.1",
     "@nestjs/typeorm": "^10.0.2",
     "@nestjs/websockets": "^10.3.7",
+    "bitcoin-core": "^4.2.0",
+    "bitcoinjs-lib": "^6.1.5",
     "js-yaml": "^4.1.0",
     "pg": "^8.11.5",
     "reflect-metadata": "^0.1.13",
