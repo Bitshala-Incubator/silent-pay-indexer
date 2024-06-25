@@ -7,9 +7,13 @@ import configuration from '@/configuration';
 import { TransactionsModule } from '@/transactions/transactions.module';
 import { commandHandlers } from '@/commands/handlers';
 import { OperationStateModule } from '@/operation-state/operation-state.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { BlockProviderModule } from '@/block-data-providers/block-provider.module';
+import { CqrsModule } from '@nestjs/cqrs';
 
 @Module({
     imports: [
+        ScheduleModule.forRoot(),
         ConfigModule.forRoot({
             ignoreEnvFile: true,
             load: [configuration],
@@ -31,6 +35,8 @@ import { OperationStateModule } from '@/operation-state/operation-state.module';
         }),
         TransactionsModule,
         OperationStateModule,
+        BlockProviderModule,
+        CqrsModule,
     ],
     controllers: [AppController],
     providers: [AppService, ...commandHandlers],

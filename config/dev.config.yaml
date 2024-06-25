@@ -7,7 +7,7 @@ db:
   synchronize: true
 app:
   port: 3000
-  network: regtest
+  network: main
 providerType: ESPLORA
 esplora:
-  url: <url>
+  url: https://blockstream.info

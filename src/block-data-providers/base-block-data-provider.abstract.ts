@@ -4,9 +4,17 @@ import {
     TransactionInput,
     TransactionOutput,
 } from '@/commands/impl/index-transaction.command';
+import { OperationStateService } from '@/operation-state/operation-state.service';
+import { Logger } from '@nestjs/common';
 
 export abstract class BaseBlockDataProvider {
-    protected constructor(private readonly commandBus: CommandBus) {}
+    protected abstract readonly logger: Logger;
+    protected abstract readonly operationStateKey: string;
+
+    protected constructor(
+        private readonly commandBus: CommandBus,
+        private readonly operationStateService: OperationStateService,
+    ) {}
 
     async indexTransaction(
         txid: string,
@@ -23,6 +31,21 @@ export abstract class BaseBlockDataProvider {
                 blockHeight,
                 blockHash,
             ),
+        );
+    }
+
+    async getState(): Promise<Record<string, any>> {
+        return (
+            await this.operationStateService.getOperationState(
+                this.operationStateKey,
+            )
+        )?.state;
+    }
+
+    async setState(state: Record<string, any>): Promise<void> {
+        await this.operationStateService.setOperationState(
+            this.operationStateKey,
+            state,
         );
     }
 }
