@@ -7,3 +7,7 @@ db:
   synchronize: true
 app:
   port: 3000
+  network: regtest
+providerType: ESPLORA
+esplora:
+  url: <url>

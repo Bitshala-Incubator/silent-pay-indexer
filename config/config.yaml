@@ -7,3 +7,7 @@ db:
   synchronize: false
 app:
   port: <port>
+  network: <network>
+providerType: <providerType>
+esplora:
+  url: <host>

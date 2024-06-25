@@ -1,14 +1,18 @@
 import {
     IsBoolean,
     IsDefined,
+    IsEnum,
     IsInt,
     IsNotEmpty,
     IsString,
+    IsUrl,
     Max,
     Min,
+    ValidateIf,
     ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { BitcoinNetwork, ProviderType } from '@/common/enum';
 
 class DbConfig {
     @IsNotEmpty()
@@ -41,6 +45,18 @@ class AppConfig {
     @Min(1)
     @Max(65535)
     port: number;
+
+    @IsEnum(BitcoinNetwork)
+    network: BitcoinNetwork;
+}
+
+class EsploraConfig {
+    @IsUrl({
+        protocols: ['http', 'https'],
+        require_protocol: true,
+        require_host: true,
+    })
+    url: string;
 }
 
 export class Config {
@@ -53,4 +69,13 @@ export class Config {
     @ValidateNested()
     @Type(() => AppConfig)
     app: AppConfig;
+
+    @IsEnum(ProviderType)
+    providerType: ProviderType;
+
+    @ValidateIf((o) => o.providerType === ProviderType.ESPLORA)
+    @IsDefined()
+    @ValidateNested()
+    @Type(() => EsploraConfig)
+    esplora: EsploraConfig;
 }
