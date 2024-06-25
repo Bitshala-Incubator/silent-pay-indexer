@@ -2,24 +2,25 @@ import { Module } from '@nestjs/common';
 import { EsploraProvider } from '@/block-data-providers/esplora.provider';
 import { ConfigService } from '@nestjs/config';
 import { OperationStateModule } from '@/operation-state/operation-state.module';
-import { CommandBus, CqrsModule } from '@nestjs/cqrs';
 import { OperationStateService } from '@/operation-state/operation-state.service';
+import { IndexerModule } from '@/indexer/indexer.module';
+import { IndexerService } from '@/indexer/indexer.service';
 
 @Module({
-    imports: [OperationStateModule, CqrsModule],
+    imports: [OperationStateModule, IndexerModule],
     controllers: [],
     providers: [
         {
             provide: 'BlockDataProvider',
-            inject: [ConfigService, CommandBus, OperationStateService],
+            inject: [ConfigService, IndexerService, OperationStateService],
             useFactory: (
                 configService: ConfigService,
-                commandBus: CommandBus,
+                indexerService: IndexerService,
                 operationStateService: OperationStateService,
             ) => {
                 return new EsploraProvider(
                     configService,
-                    commandBus,
+                    indexerService,
                     operationStateService,
                 );
             },

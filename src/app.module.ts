@@ -5,11 +5,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from '@/configuration';
 import { TransactionsModule } from '@/transactions/transactions.module';
-import { commandHandlers } from '@/commands/handlers';
 import { OperationStateModule } from '@/operation-state/operation-state.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BlockProviderModule } from '@/block-data-providers/block-provider.module';
-import { CqrsModule } from '@nestjs/cqrs';
 
 @Module({
     imports: [
@@ -36,9 +34,8 @@ import { CqrsModule } from '@nestjs/cqrs';
         TransactionsModule,
         OperationStateModule,
         BlockProviderModule,
-        CqrsModule,
     ],
     controllers: [AppController],
-    providers: [AppService, ...commandHandlers],
+    providers: [AppService],
 })
 export class AppModule {}

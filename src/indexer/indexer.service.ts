@@ -1,44 +1,57 @@
-import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import {
-    IndexTransactionCommand,
-    TransactionInput,
-} from '@/commands/impl/index-transaction.command';
-import { createTaggedHash, extractPubKeyFromScript } from '@/common/common';
-import { publicKeyCombine, publicKeyTweakMul } from 'secp256k1';
+import { TransactionsService } from '@/transactions/transactions.service';
 import {
     Transaction,
-    TransactionOutput,
+    TransactionOutput as TransactionOutputEntity,
 } from '@/transactions/transaction.entity';
-import { TransactionsService } from '@/transactions/transactions.service';
+import { createTaggedHash, extractPubKeyFromScript } from '@/common/common';
+import { publicKeyCombine, publicKeyTweakMul } from 'secp256k1';
+import { Injectable } from '@nestjs/common';
 
-@CommandHandler(IndexTransactionCommand)
-export class IndexTransactionHandler
-    implements ICommandHandler<IndexTransactionCommand>
-{
+export type TransactionInput = {
+    txid: string; // transaction id
+    vout: number; // output index
+    scriptSig: string; // unlocking script
+    witness?: string[]; // witness data
+    prevOutScript: string; // previous output script
+};
+
+export type TransactionOutput = {
+    scriptPubKey: string;
+    value: number;
+};
+
+@Injectable()
+export class IndexerService {
     constructor(private readonly transactionsService: TransactionsService) {}
 
-    async execute(command: IndexTransactionCommand) {
-        const eligibleOutputPubKeys: TransactionOutput[] = [];
+    async index(
+        txid: string,
+        vin: TransactionInput[],
+        vout: TransactionOutput[],
+        blockHeight: number,
+        blockHash: string,
+    ) {
+        const eligibleOutputPubKeys: TransactionOutputEntity[] = [];
 
         // verify if the transaction contains at least one BIP341 P2TR output
         // this output could be a potential silent payment
-        let vout = 0;
-        for (const output of command.vout) {
+        let n = 0;
+        for (const output of vout) {
             if (this.isP2TR(output.scriptPubKey)) {
                 eligibleOutputPubKeys.push({
                     pubKey: output.scriptPubKey.substring(4),
                     value: output.value,
-                    vout: vout,
+                    vout: n,
                 });
             }
-            vout++;
+            n++;
         }
 
         if (eligibleOutputPubKeys.length === 0) return;
 
         // verify that the transaction does not spend an output with SegWit version > 1
         // this would make the transaction ineligible for silent payment v0
-        for (const input of command.vin) {
+        for (const input of vin) {
             // grab the first op code of the prevOutScript
             const firstOpCode = parseInt(input.prevOutScript.slice(0, 2), 16);
 
@@ -49,7 +62,7 @@ export class IndexTransactionHandler
 
         // extract the input public keys from the transaction
         const pubKeys: Buffer[] = [];
-        for (const input of command.vin) {
+        for (const input of vin) {
             const pubKey = extractPubKeyFromScript(
                 Buffer.from(input.prevOutScript, 'hex'),
                 Buffer.from(input.scriptSig, 'hex'),
@@ -60,7 +73,7 @@ export class IndexTransactionHandler
 
         if (pubKeys.length === 0) return;
 
-        const smallestOutpoint = this.getSmallestOutpoint(command.vin);
+        const smallestOutpoint = this.getSmallestOutpoint(vin);
         const sumOfPublicKeys = Buffer.from(publicKeyCombine(pubKeys, true));
 
         const inputHash = createTaggedHash(
@@ -74,9 +87,9 @@ export class IndexTransactionHandler
         );
 
         const transaction = new Transaction();
-        transaction.id = command.txid;
-        transaction.blockHeight = command.blockHeight;
-        transaction.blockHash = command.blockHash;
+        transaction.id = txid;
+        transaction.blockHeight = blockHeight;
+        transaction.blockHash = blockHash;
         transaction.scanTweak = scanTweak.toString('hex');
         transaction.outputs = eligibleOutputPubKeys;
         transaction.isSpent = false;

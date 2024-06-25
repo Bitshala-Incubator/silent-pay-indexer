@@ -1,5 +1,4 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
-import { CommandBus } from '@nestjs/cqrs';
 import { OperationStateService } from '@/operation-state/operation-state.service';
 import { BaseBlockDataProvider } from '@/block-data-providers/base-block-data-provider.abstract';
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
@@ -7,8 +6,8 @@ import { TAPROOT_ACTIVATION_HEIGHT } from '@/common/constants';
 import { ConfigService } from '@nestjs/config';
 import { BitcoinNetwork } from '@/common/enum';
 import { URL } from 'url';
-import { TransactionInput } from '@/commands/impl/index-transaction.command';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { IndexerService, TransactionInput } from '@/indexer/indexer.service';
 
 type EsploraOperationState = {
     currentBlockHeight: number;
@@ -69,10 +68,10 @@ export class EsploraProvider
 
     constructor(
         private readonly configService: ConfigService,
-        commandBus: CommandBus,
+        indexerService: IndexerService,
         operationStateService: OperationStateService,
     ) {
-        super(commandBus, operationStateService);
+        super(indexerService, operationStateService);
 
         let pathPrefix;
         switch (this.configService.get<BitcoinNetwork>('app.network')) {

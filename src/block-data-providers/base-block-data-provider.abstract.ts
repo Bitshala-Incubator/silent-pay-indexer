@@ -1,18 +1,17 @@
-import { CommandBus } from '@nestjs/cqrs';
-import {
-    IndexTransactionCommand,
-    TransactionInput,
-    TransactionOutput,
-} from '@/commands/impl/index-transaction.command';
 import { OperationStateService } from '@/operation-state/operation-state.service';
 import { Logger } from '@nestjs/common';
+import {
+    IndexerService,
+    TransactionInput,
+    TransactionOutput,
+} from '@/indexer/indexer.service';
 
 export abstract class BaseBlockDataProvider {
     protected abstract readonly logger: Logger;
     protected abstract readonly operationStateKey: string;
 
     protected constructor(
-        private readonly commandBus: CommandBus,
+        private readonly indexerService: IndexerService,
         private readonly operationStateService: OperationStateService,
     ) {}
 
@@ -23,14 +22,12 @@ export abstract class BaseBlockDataProvider {
         blockHeight: number,
         blockHash: string,
     ): Promise<void> {
-        await this.commandBus.execute(
-            new IndexTransactionCommand(
-                txid,
-                vin,
-                vout,
-                blockHeight,
-                blockHash,
-            ),
+        await this.indexerService.index(
+            txid,
+            vin,
+            vout,
+            blockHeight,
+            blockHash,
         );
     }
 
