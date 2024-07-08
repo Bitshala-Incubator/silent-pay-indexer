@@ -64,6 +64,24 @@ class EsploraConfig {
     batchSize: number;
 }
 
+export class BitcoinCoreConfig {
+    @IsNotEmpty()
+    @IsString()
+    rpcHost: string;
+
+    @IsNotEmpty()
+    @IsString()
+    rpcPass: string;
+
+    @IsNotEmpty()
+    @IsString()
+    rpcUser: string;
+
+    @IsNotEmpty()
+    @IsString()
+    rpcPort: string;
+}
+
 export class Config {
     @IsDefined()
     @ValidateNested()
@@ -83,4 +101,10 @@ export class Config {
     @ValidateNested()
     @Type(() => EsploraConfig)
     esplora: EsploraConfig;
+
+    @ValidateIf((o) => o.providerType === ProviderType.BITCOIN_CORE_RPC)
+    @IsDefined()
+    @ValidateNested()
+    @Type(() => BitcoinCoreConfig)
+    bitcoinCore: BitcoinCoreConfig;
 }

@@ -1,13 +1,15 @@
 import { Module } from '@nestjs/common';
 import { EsploraProvider } from '@/block-data-providers/esplora.provider';
-import { ConfigService } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { OperationStateModule } from '@/operation-state/operation-state.module';
 import { OperationStateService } from '@/operation-state/operation-state.service';
 import { IndexerModule } from '@/indexer/indexer.module';
 import { IndexerService } from '@/indexer/indexer.service';
+import { ProviderType } from '@/common/enum';
+import { BitcoinCoreProvider } from '@/block-data-providers/bitcoin-core/provider';
 
 @Module({
-    imports: [OperationStateModule, IndexerModule],
+    imports: [OperationStateModule, IndexerModule, ConfigModule],
     controllers: [],
     providers: [
         {
@@ -18,11 +20,22 @@ import { IndexerService } from '@/indexer/indexer.service';
                 indexerService: IndexerService,
                 operationStateService: OperationStateService,
             ) => {
-                return new EsploraProvider(
-                    configService,
-                    indexerService,
-                    operationStateService,
-                );
+                switch (configService.get<ProviderType>('providerType')) {
+                    case ProviderType.ESPLORA:
+                        return new EsploraProvider(
+                            configService,
+                            indexerService,
+                            operationStateService,
+                        );
+                    case ProviderType.BITCOIN_CORE_RPC:
+                        return new BitcoinCoreProvider(
+                            configService,
+                            indexerService,
+                            operationStateService,
+                        );
+                    default:
+                        throw Error('unrecognised provider type in config');
+                }
             },
         },
     ],

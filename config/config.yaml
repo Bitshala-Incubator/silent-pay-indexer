@@ -12,3 +12,8 @@ providerType: <providerType>
 esplora:
   url: <host>
   batchSize: <batchSize>
+bitcoinCore:
+  rpcHost: <host>
+  rpcPass: <password>
+  rpcUser: <username>
+  rpcPort: <port>
