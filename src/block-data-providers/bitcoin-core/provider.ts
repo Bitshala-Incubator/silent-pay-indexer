@@ -25,8 +25,9 @@ import {
     Input,
     NetworkInfo,
 } from '@/block-data-providers/bitcoin-core/interfaces';
-import axios from 'axios';
+import { AxiosRequestConfig } from 'axios';
 import * as currency from 'currency.js';
+import { AxiosRetryConfig, makeRequest } from '@/common/request';
 
 @Injectable()
 export class BitcoinCoreProvider
@@ -37,6 +38,7 @@ export class BitcoinCoreProvider
     protected readonly operationStateKey = 'bitcoincore-operation-state';
     private readonly rpcUrl: string;
     private isSyncing = false;
+    private retryConfig: AxiosRetryConfig;
 
     public constructor(
         private readonly configService: ConfigService,
@@ -44,9 +46,14 @@ export class BitcoinCoreProvider
         operationStateService: OperationStateService,
     ) {
         super(indexerService, operationStateService);
+
         const { protocol, rpcPort, rpcHost } =
             configService.get<BitcoinCoreConfig>('bitcoinCore');
+
         this.rpcUrl = `${protocol}://${rpcHost}:${rpcPort}/`;
+
+        this.retryConfig =
+            this.configService.get<AxiosRetryConfig>('app.requestRetry');
     }
 
     async onApplicationBootstrap() {
@@ -82,41 +89,44 @@ export class BitcoinCoreProvider
             throw new Error('State not found');
         }
 
-        const tipHeight = await this.getTipHeight();
-        if (tipHeight <= state.indexedBlockHeight) {
-            this.logger.debug(
-                `No new blocks found. Current tip height: ${tipHeight}`,
-            );
-            this.isSyncing = false;
-            return;
-        }
-
-        const networkInfo = await this.getNetworkInfo();
-        const verbosityLevel = this.versionToVerbosity(networkInfo.version);
-
-        let height = state.indexedBlockHeight + 1;
-        for (height; height <= tipHeight; height++) {
-            const transactions = await this.processBlock(
-                height,
-                verbosityLevel,
-            );
-
-            for (const transaction of transactions) {
-                const { txid, vin, vout, blockHeight, blockHash } = transaction;
-                await this.indexTransaction(
-                    txid,
-                    vin,
-                    vout,
-                    blockHeight,
-                    blockHash,
+        try {
+            const tipHeight = await this.getTipHeight();
+            if (tipHeight <= state.indexedBlockHeight) {
+                this.logger.debug(
+                    `No new blocks found. Current tip height: ${tipHeight}`,
                 );
+                this.isSyncing = false;
+                return;
             }
 
-            state.indexedBlockHeight = height;
-            await this.setState(state);
-        }
+            const networkInfo = await this.getNetworkInfo();
+            const verbosityLevel = this.versionToVerbosity(networkInfo.version);
 
-        this.isSyncing = false;
+            let height = state.indexedBlockHeight + 1;
+            for (height; height <= tipHeight; height++) {
+                const transactions = await this.processBlock(
+                    height,
+                    verbosityLevel,
+                );
+
+                for (const transaction of transactions) {
+                    const { txid, vin, vout, blockHeight, blockHash } =
+                        transaction;
+                    await this.indexTransaction(
+                        txid,
+                        vin,
+                        vout,
+                        blockHeight,
+                        blockHash,
+                    );
+                }
+
+                state.indexedBlockHeight = height;
+                await this.setState(state);
+            }
+        } finally {
+            this.isSyncing = false;
+        }
     }
 
     private async getNetworkInfo(): Promise<NetworkInfo> {
@@ -241,31 +251,27 @@ export class BitcoinCoreProvider
         const { rpcUser, rpcPass } =
             this.configService.get<BitcoinCoreConfig>('bitcoinCore');
 
-        try {
-            const response = await axios.post(
-                this.rpcUrl,
-                {
-                    ...body,
-                    jsonrpc: '1.0',
-                    id: 'silent_payment_indexer',
-                },
-                {
-                    auth: {
-                        username: rpcUser,
-                        password: rpcPass,
-                    },
-                },
-            );
+        const requestConfig: AxiosRequestConfig = {
+            url: this.rpcUrl,
+            method: 'POST',
+            auth: {
+                username: rpcUser,
+                password: rpcPass,
+            },
+            data: {
+                ...body,
+                jsonrpc: '1.0',
+                id: 'silent_payment_indexer',
+            },
+        };
 
-            return response.data.result;
-        } catch (error) {
-            this.logger.error(
-                `Request to BitcoinCore failed!\nRequest:\n${JSON.stringify(
-                    body,
-                )}\nError:\n${error.message}`,
-            );
-            throw error;
-        }
+        const response = await makeRequest(
+            requestConfig,
+            this.retryConfig,
+            this.logger,
+        );
+
+        return response.result;
     }
 
     private convertToSatoshi(amount: number): number {

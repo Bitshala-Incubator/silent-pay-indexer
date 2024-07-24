@@ -1,13 +1,13 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { OperationStateService } from '@/operation-state/operation-state.service';
 import { BaseBlockDataProvider } from '@/block-data-providers/base-block-data-provider.abstract';
-import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import { TAPROOT_ACTIVATION_HEIGHT } from '@/common/constants';
 import { ConfigService } from '@nestjs/config';
 import { BitcoinNetwork } from '@/common/enum';
 import { URL } from 'url';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { IndexerService, TransactionInput } from '@/indexer/indexer.service';
+import { AxiosRetryConfig, makeRequest } from '@/common/request';
 
 type EsploraOperationState = {
     currentBlockHeight: number;
@@ -64,6 +64,7 @@ export class EsploraProvider
     protected readonly logger = new Logger(EsploraProvider.name);
     protected readonly operationStateKey = 'esplora-operation-state';
     private readonly baseUrl: string;
+    private retryConfig: AxiosRetryConfig;
     private isSyncing = false;
     private readonly batchSize: number;
 
@@ -91,6 +92,9 @@ export class EsploraProvider
         this.baseUrl = new URL(
             `${this.configService.get<string>('esplora.url')}${pathPrefix}`,
         ).toString();
+
+        this.retryConfig =
+            this.configService.get<AxiosRetryConfig>('app.requestRetry');
     }
 
     async onApplicationBootstrap() {
@@ -125,40 +129,34 @@ export class EsploraProvider
             throw new Error('State not found');
         }
 
-        const tipHeight = await this.getTipHeight();
-        if (tipHeight <= state.indexedBlockHeight) {
-            this.logger.log(
-                `No new blocks found. Current tip height: ${tipHeight}`,
-            );
-            this.isSyncing = false;
-            return;
-        }
-
-        for (
-            let height = state.indexedBlockHeight + 1;
-            height <= tipHeight;
-            height++
-        ) {
-            const blockHash = await this.getBlockHash(height);
-            this.logger.log(
-                `Processing block at height ${height}, hash ${blockHash}`,
-            );
-
-            try {
-                await this.processBlock(height, blockHash);
-            } catch (error) {
-                this.logger.error(
-                    `Error processing block at height ${height}, hash ${blockHash}: ${error.message}`,
+        try {
+            const tipHeight = await this.getTipHeight();
+            if (tipHeight <= state.indexedBlockHeight) {
+                this.logger.log(
+                    `No new blocks found. Current tip height: ${tipHeight}`,
                 );
                 this.isSyncing = false;
-                break;
+                return;
             }
 
-            state.indexedBlockHeight = height;
-            await this.setState(state);
-        }
+            for (
+                let height = state.indexedBlockHeight + 1;
+                height <= tipHeight;
+                height++
+            ) {
+                const blockHash = await this.getBlockHash(height);
+                this.logger.log(
+                    `Processing block at height ${height}, hash ${blockHash}`,
+                );
 
-        this.isSyncing = false;
+                await this.processBlock(height, blockHash);
+
+                state.indexedBlockHeight = height;
+                await this.setState(state);
+            }
+        } finally {
+            this.isSyncing = false;
+        }
     }
 
     private async processBlock(height: number, hash: string) {
@@ -191,71 +189,58 @@ export class EsploraProvider
         }
     }
 
-    async request(config: AxiosRequestConfig): Promise<any> {
-        try {
-            const response = await axios.request(config);
-            this.logger.debug(
-                `Request to Esplora succeeded:\nRequest:\n${JSON.stringify(
-                    config,
-                    null,
-                    2,
-                )}\nResponse:\n${JSON.stringify(response.data, null, 2)}`,
-            );
-            return response.data;
-        } catch (error) {
-            this.logger.error(error);
-            if (error instanceof AxiosError) {
-                if (error.response) {
-                    this.logger.error(
-                        `Request to Esplora failed!\nStatus code ${
-                            error.response.status
-                        }\nRequest:\n${JSON.stringify(
-                            config,
-                        )}\nResponse:\n${JSON.stringify(error.response.data)}`,
-                    );
-                }
-            } else {
-                this.logger.error(
-                    `Request to Esplora failed!\nRequest:\n${JSON.stringify(
-                        config,
-                    )}\nError:\n${error.message}`,
-                );
-            }
-        }
-    }
-
     private async getTipHeight(): Promise<number> {
-        return this.request({
-            method: 'GET',
-            url: `${this.baseUrl}/blocks/tip/height`,
-        });
+        return makeRequest(
+            {
+                method: 'GET',
+                url: `${this.baseUrl}/blocks/tip/height`,
+            },
+            this.retryConfig,
+            this.logger,
+        );
     }
 
     private async getTipHash(): Promise<string> {
-        return this.request({
-            method: 'GET',
-            url: `${this.baseUrl}/blocks/tip/hash`,
-        });
+        return makeRequest(
+            {
+                method: 'GET',
+                url: `${this.baseUrl}/blocks/tip/hash`,
+            },
+            this.retryConfig,
+            this.logger,
+        );
     }
 
     private async getBlockHash(height: number): Promise<string> {
-        return this.request({
-            method: 'GET',
-            url: `${this.baseUrl}/block-height/${height}`,
-        });
+        return makeRequest(
+            {
+                method: 'GET',
+                url: `${this.baseUrl}/block-height/${height}`,
+            },
+            this.retryConfig,
+            this.logger,
+        );
     }
 
     private async getTxidsForBlock(hash: string): Promise<string[]> {
-        return this.request({
-            method: 'GET',
-            url: `${this.baseUrl}/block/${hash}/txids`,
-        });
+        return makeRequest(
+            {
+                method: 'GET',
+                url: `${this.baseUrl}/block/${hash}/txids`,
+            },
+            this.retryConfig,
+            this.logger,
+        );
     }
 
     private async getTx(txid: string): Promise<EsploraTransaction> {
-        return this.request({
-            method: 'GET',
-            url: `${this.baseUrl}/tx/${txid}`,
-        });
+        return makeRequest(
+            {
+                method: 'GET',
+                url: `${this.baseUrl}/tx/${txid}`,
+            },
+            this.retryConfig,
+            this.logger,
+        );
     }
 }

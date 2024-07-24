@@ -24,6 +24,16 @@ class DbConfig {
     synchronize: boolean;
 }
 
+class AxiosRetryConfig {
+    @IsInt()
+    @Min(1)
+    count: number;
+
+    @IsInt()
+    @Min(500)
+    delay: number;
+}
+
 class AppConfig {
     @IsInt()
     @Min(1)
@@ -32,6 +42,11 @@ class AppConfig {
 
     @IsEnum(BitcoinNetwork)
     network: BitcoinNetwork;
+
+    @IsDefined()
+    @ValidateNested()
+    @Type(() => AxiosRetryConfig)
+    requestRetry: AxiosRetryConfig;
 }
 
 class EsploraConfig {

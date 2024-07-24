@@ -4,6 +4,9 @@ db:
 app:
   port: 3000
   network: regtest
+  requestRetry:
+    delay: 500
+    count: 1
 providerType: BITCOIN_CORE_RPC
 bitcoinCore:
   protocol: http

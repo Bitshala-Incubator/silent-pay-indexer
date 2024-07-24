@@ -4,6 +4,9 @@ db:
 app:
   port: 3000
   network: regtest
+  requestRetry:
+    delay: 3000
+    count: 3
 providerType: ESPLORA
 esplora:
   url: https://blockstream.info
@@ -14,3 +17,4 @@ bitcoinCore:
   rpcPass: polarpass
   rpcUser: polaruser
   rpcPort: 18445
+    
