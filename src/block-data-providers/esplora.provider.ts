@@ -65,6 +65,7 @@ export class EsploraProvider
     protected readonly operationStateKey = 'esplora-operation-state';
     private readonly baseUrl: string;
     private isSyncing = false;
+    private readonly batchSize: number;
 
     constructor(
         private readonly configService: ConfigService,
@@ -72,6 +73,8 @@ export class EsploraProvider
         operationStateService: OperationStateService,
     ) {
         super(indexerService, operationStateService);
+
+        this.batchSize = this.configService.get<number>('esplora.batchSize');
 
         let pathPrefix;
         switch (this.configService.get<BitcoinNetwork>('app.network')) {
@@ -161,26 +164,30 @@ export class EsploraProvider
     private async processBlock(height: number, hash: string) {
         const txids = await this.getTxidsForBlock(hash);
 
-        // this is not very efficient
-        // at the time of implementation, I'm using a public esplora instance,
-        // so there is a rate limit on the number of requests
-        // in the future, we should add a flag to parallelize this
-        for (let i = 1; i < txids.length; i++) {
-            const txid = txids[i];
-            const tx = await this.getTx(txid);
-            const vin: TransactionInput[] = tx.vin.map((input) => ({
-                txid: input.txid,
-                vout: input.vout,
-                scriptSig: input.scriptsig,
-                prevOutScript: input.prevout.scriptpubkey,
-                witness: input.witness,
-            }));
-            const vout = tx.vout.map((output) => ({
-                scriptPubKey: output.scriptpubkey,
-                value: output.value,
-            }));
+        for (let i = 1; i < txids.length; i += this.batchSize) {
+            const batch = txids.slice(
+                i,
+                Math.min(i + this.batchSize, txids.length),
+            );
 
-            await this.indexTransaction(txid, vin, vout, height, hash);
+            await Promise.all(
+                batch.map(async (txid) => {
+                    const tx = await this.getTx(txid);
+                    const vin: TransactionInput[] = tx.vin.map((input) => ({
+                        txid: input.txid,
+                        vout: input.vout,
+                        scriptSig: input.scriptsig,
+                        prevOutScript: input.prevout.scriptpubkey,
+                        witness: input.witness,
+                    }));
+                    const vout = tx.vout.map((output) => ({
+                        scriptPubKey: output.scriptpubkey,
+                        value: output.value,
+                    }));
+
+                    await this.indexTransaction(txid, vin, vout, height, hash);
+                }, this),
+            );
         }
     }
 

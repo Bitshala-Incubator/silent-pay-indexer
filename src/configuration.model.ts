@@ -57,6 +57,11 @@ class EsploraConfig {
         require_host: true,
     })
     url: string;
+
+    @IsInt()
+    @Min(1)
+    @Max(100)
+    batchSize: number;
 }
 
 export class Config {

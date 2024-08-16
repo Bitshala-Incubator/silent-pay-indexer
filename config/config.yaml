@@ -11,3 +11,4 @@ app:
 providerType: <providerType>
 esplora:
   url: <host>
+  batchSize: <batchSize>
