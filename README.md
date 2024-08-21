@@ -53,21 +53,8 @@ Read more about silent payments in [BIP 352](https://github.com/bitcoin/bips/pul
 3. Install dependencies:
 
 ```bash
-  $ npm install --force
-  $ npm install --force
+  $ npm install
 ```
-
-_Note: Due to the broken nature of the packages we can only use force for now, but using `--force` can overwrite existing packages so use with caution._
-
-### :notebook: Prerequisites
-
--   Node.js
--   Docker (optional)
-
-### :wrench: Configuration
-
--   Create a `config.yaml` file in the project config folder. e.g:
-    _Note: Due to the broken nature of the packages we can only use force for now, but using `--force` can overwrite existing packages so use with caution._
 
 ### :notebook: Prerequisites
 
