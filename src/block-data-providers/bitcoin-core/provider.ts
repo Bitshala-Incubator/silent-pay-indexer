@@ -2,7 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { BitcoinCoreConfig } from '@/configuration.model';
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { BitcoinNetwork } from '@/common/enum';
-import { TAPROOT_ACTIVATION_HEIGHT } from '@/common/constants';
+import { SATS_PER_BTC, TAPROOT_ACTIVATION_HEIGHT } from '@/common/constants';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import {
     IndexerService,
@@ -21,6 +21,7 @@ import {
     Input,
 } from '@/block-data-providers/bitcoin-core/interfaces';
 import axios from 'axios';
+import * as currency from 'currency.js';
 
 @Injectable()
 export class BitcoinCoreProvider
@@ -29,6 +30,7 @@ export class BitcoinCoreProvider
 {
     protected readonly logger = new Logger(BitcoinCoreProvider.name);
     protected readonly operationStateKey = 'bitcoincore-operation-state';
+    private readonly rpcUrl: string;
     private isSyncing = false;
 
     public constructor(
@@ -37,6 +39,9 @@ export class BitcoinCoreProvider
         operationStateService: OperationStateService,
     ) {
         super(indexerService, operationStateService);
+        const { protocol, rpcPort, rpcHost } =
+            configService.get<BitcoinCoreConfig>('bitcoinCore');
+        this.rpcUrl = `${protocol}://${rpcHost}:${rpcPort}/`;
     }
 
     async onApplicationBootstrap() {
@@ -57,6 +62,7 @@ export class BitcoinCoreProvider
                         ? TAPROOT_ACTIVATION_HEIGHT - 1
                         : 0,
             };
+
             await this.setState(state);
         }
     }
@@ -70,6 +76,7 @@ export class BitcoinCoreProvider
         if (!state) {
             throw new Error('State not found');
         }
+
         const tipHeight = await this.getTipHeight();
         if (tipHeight <= state.indexedBlockHeight) {
             this.logger.debug(
@@ -80,9 +87,9 @@ export class BitcoinCoreProvider
         }
 
         let height = state.indexedBlockHeight + 1;
-
         for (height; height <= tipHeight; height++) {
             const transactions = await this.processBlock(height);
+
             for (const transaction of transactions) {
                 const { txid, vin, vout, blockHeight, blockHash } = transaction;
                 await this.indexTransaction(
@@ -93,45 +100,43 @@ export class BitcoinCoreProvider
                     blockHash,
                 );
             }
+
             state.indexedBlockHeight = height;
             await this.setState(state);
         }
+
         this.isSyncing = false;
     }
 
     private async getTipHeight(): Promise<number> {
-        const body = {
+        return this.request({
             method: 'getblockcount',
             params: [],
-        };
-        return this.request(body);
+        });
     }
 
     private async getBlockHash(height: number): Promise<string> {
-        const body = {
+        return this.request({
             method: 'getblockhash',
             params: [height],
-        };
-        return this.request(body);
+        });
     }
 
     private async getBlock(hash: string, verbosity: number): Promise<Block> {
-        const body = {
+        return this.request({
             method: 'getblock',
             params: [hash, verbosity],
-        };
-        return this.request(body);
+        });
     }
 
     private async getRawTransaction(
         txid: string,
         isVerbose: boolean,
     ): Promise<BlockTransaction> {
-        const body = {
+        return this.request({
             method: 'getrawtransaction',
             params: [txid, isVerbose],
-        };
-        return this.request(body);
+        });
     }
 
     public async processBlock(height: number): Promise<Transaction[]> {
@@ -140,16 +145,18 @@ export class BitcoinCoreProvider
         this.logger.debug(
             `Processing block at height ${height}, hash ${blockHash}`,
         );
+
         const block = await this.getBlock(blockHash, 2);
-        const excludedCoinbaseTxns = block.tx.slice(1);
-        for (const txn of excludedCoinbaseTxns) {
+
+        for (let i = 1; i < block.tx.length; i++) {
             const parsedTransaction = await this.parseTransaction(
-                txn,
+                block.tx[i],
                 block.hash,
                 block.height,
             );
             parsedTransactionList.push(parsedTransaction);
         }
+
         return parsedTransactionList;
     }
 
@@ -178,8 +185,6 @@ export class BitcoinCoreProvider
     private async parseTransactionInput(
         txnInput: Input,
     ): Promise<TransactionInput> {
-        let witness = undefined;
-        let scriptSig = '';
         const prevTransaction = await this.getRawTransaction(
             txnInput.txid,
             true,
@@ -187,14 +192,12 @@ export class BitcoinCoreProvider
         const vout = txnInput.vout;
         const prevOutScript = prevTransaction.vout.find((out) => out.n == vout)
             .scriptPubKey.hex;
-        witness = txnInput.txinwitness;
-        scriptSig = txnInput.scriptSig.hex;
 
         return {
             txid: txnInput.txid,
             vout,
-            scriptSig,
-            witness,
+            scriptSig: txnInput.scriptSig.hex,
+            witness: txnInput.txinwitness,
             prevOutScript,
         };
     }
@@ -202,16 +205,17 @@ export class BitcoinCoreProvider
     private parseTransactionOutput(txnOutput: Output): TransactionOutput {
         return {
             scriptPubKey: txnOutput.scriptPubKey.hex,
-            value: txnOutput.value,
+            value: this.convertToSatoshi(txnOutput.value),
         };
     }
 
     private async request(body: RPCRequestBody): Promise<any> {
-        const { rpcUser, rpcPass, rpcPort, rpcHost } =
+        const { rpcUser, rpcPass } =
             this.configService.get<BitcoinCoreConfig>('bitcoinCore');
+
         try {
             const response = await axios.post(
-                `http://${rpcHost}:${rpcPort}/`,
+                this.rpcUrl,
                 {
                     ...body,
                     jsonrpc: '1.0',
@@ -224,6 +228,7 @@ export class BitcoinCoreProvider
                     },
                 },
             );
+
             return response.data.result;
         } catch (error) {
             this.logger.error(
@@ -233,5 +238,9 @@ export class BitcoinCoreProvider
             );
             throw error;
         }
+    }
+
+    private convertToSatoshi(amount: number): number {
+        return currency(amount, { precision: 8 }).multiply(SATS_PER_BTC).value;
     }
 }

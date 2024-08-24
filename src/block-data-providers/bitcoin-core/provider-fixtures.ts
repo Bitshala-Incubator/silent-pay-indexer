@@ -520,12 +520,12 @@ export const parsedTransactions = new Map([
                 {
                     scriptPubKey:
                         '0014fed893be0f774fe69825cafd9a4d721ceaf4d635',
-                    value: 11.56096634,
+                    value: 1156096634,
                 },
                 {
                     scriptPubKey:
                         '0014e0d0621ec10bfb9ee7902f8c46562e808e464940',
-                    value: 1,
+                    value: 100000000,
                 },
             ],
             blockHeight: 7110,

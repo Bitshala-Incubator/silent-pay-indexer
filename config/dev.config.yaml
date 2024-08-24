@@ -13,6 +13,7 @@ esplora:
   url: https://blockstream.info
   batchSize: 5
 bitcoinCore:
+  protocol: http
   rpcHost: 127.0.0.1
   rpcPass: polarpass
   rpcUser: polaruser

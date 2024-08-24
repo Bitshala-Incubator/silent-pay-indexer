@@ -2,6 +2,7 @@ import {
     IsBoolean,
     IsDefined,
     IsEnum,
+    IsIn,
     IsInt,
     IsNotEmpty,
     IsString,
@@ -65,6 +66,10 @@ class EsploraConfig {
 }
 
 export class BitcoinCoreConfig {
+    @IsString()
+    @IsIn(['http', 'https'])
+    protocol: string;
+
     @IsNotEmpty()
     @IsString()
     rpcHost: string;
@@ -77,9 +82,10 @@ export class BitcoinCoreConfig {
     @IsString()
     rpcUser: string;
 
-    @IsNotEmpty()
-    @IsString()
-    rpcPort: string;
+    @IsInt()
+    @Min(1)
+    @Max(65535)
+    rpcPort: number;
 }
 
 export class Config {
