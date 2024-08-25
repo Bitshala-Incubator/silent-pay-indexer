@@ -40,7 +40,7 @@ We don’t need to store the `script_pub_key` because if we have the private key
     - Each output contains the following information:
         - 8 byte value of the output
         - 32 byte `pub_key`
-        - 1 byte `vout`
+        - 4 byte `vout`
     - 33 byte `scan_tweak`
 - Silent block is serialised as follows:
     - One byte big-endian encoded silent block type.
