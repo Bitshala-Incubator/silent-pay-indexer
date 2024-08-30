@@ -1,9 +1,5 @@
 db:
-  host: <host>
-  port: <port>
-  username: <username>
-  password: <password>
-  databaseName: silent-pay-indexer
+  path: ~/.silent-pay-indexer/db/database.sqlite
   synchronize: false
 app:
   port: <port>

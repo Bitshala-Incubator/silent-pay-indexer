@@ -70,35 +70,9 @@ Read more about silent payments in [BIP 352](https://github.com/bitcoin/bips/pul
     $ cp config.yaml test.config.yaml
 ```
 
--   Set the necessary environment variables (e.g., database connection, provider type, app port, etc.).
+-   Set the necessary environment variables (e.g., provider type, app port, etc.).
 
 ### :rocket: Running the Application
-
-1. Start Postgres
-
-```bash
-    $ cd dev
-    $ docker compose up -d
-```
-
-2. Start App
-   $ cd config
-   $ cp config.yaml test.config.yaml
-
-````
-
--   Set the necessary environment variables (e.g., database connection, provider type, app port, etc.).
-
-### :rocket: Running the Application
-
-1. Start Postgres
-
-```bash
-    $ cd dev
-    $ docker compose up -d
-````
-
-2. Start App
 
 ```bash
     $ npm run start:dev

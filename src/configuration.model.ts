@@ -18,24 +18,7 @@ import { BitcoinNetwork, ProviderType } from '@/common/enum';
 class DbConfig {
     @IsNotEmpty()
     @IsString()
-    host: string;
-
-    @IsInt()
-    @Min(1)
-    @Max(65535)
-    port: number;
-
-    @IsNotEmpty()
-    @IsString()
-    username: string;
-
-    @IsNotEmpty()
-    @IsString()
-    password: string;
-
-    @IsNotEmpty()
-    @IsString()
-    databaseName: string;
+    path: string;
 
     @IsBoolean()
     synchronize: boolean;

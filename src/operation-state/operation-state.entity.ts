@@ -5,6 +5,6 @@ export class OperationState {
     @PrimaryColumn('text')
     id: string;
 
-    @Column('jsonb')
+    @Column('simple-json')
     state: any;
 }

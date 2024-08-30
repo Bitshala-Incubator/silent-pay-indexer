@@ -20,7 +20,7 @@ export class Transaction {
     @Column({ type: 'text', nullable: false })
     scanTweak: string;
 
-    @Column({ type: 'jsonb', nullable: false })
+    @Column({ type: 'simple-json', nullable: false })
     outputs: TransactionOutput[];
 
     @Column({ type: 'boolean', nullable: false })
