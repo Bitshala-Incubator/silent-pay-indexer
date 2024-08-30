@@ -30,6 +30,6 @@ jobs:
           key: node-modules-${{ hashFiles('package-lock.json') }}
       - name: Install Dependencies
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
-        run: npm install --legacy-peer-deps
+        run: npm install
       - name: Run unit tests with coverage
         run: npm run test
