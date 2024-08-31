@@ -11,6 +11,8 @@ const getConfigFilePath = () => {
         case 'dev':
         case 'test':
             return join(__dirname, 'config', 'dev.config.yaml');
+        case 'e2e':
+            return join(__dirname, 'config', 'e2e.config.yaml');
         default:
             return join(__dirname, 'config', 'config.yaml');
     }

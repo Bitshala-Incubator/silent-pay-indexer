@@ -1,0 +1,13 @@
+db:
+  path: ./.silent-pay-indexer/db/database.sqlite
+  synchronize: true
+app:
+  port: 3000
+  network: regtest
+providerType: BITCOIN_CORE_RPC
+bitcoinCore:
+  protocol: http
+  rpcHost: localhost
+  rpcUser: alice
+  rpcPass: password
+  rpcPort: 18443

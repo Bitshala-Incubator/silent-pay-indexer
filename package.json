@@ -11,6 +11,7 @@
     "start": "nest start",
     "start:dev": "NODE_ENV=dev nest build --webpack --webpackPath webpack-hmr.config.js --watch",
     "start:debug": "NODE_ENV=dev nest build --webpack --webpackPath webpack-hmr.config.js --debug --watch",
+    "start:e2e": "NODE_ENV=e2e nest build --webpack --webpackPath webpack-hmr.config.js",
     "start:prod": "node dist/main",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "format:fix": "prettier --write --loglevel=silent \"src/**/*.ts\"",
@@ -20,7 +21,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand"
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:e2e": "node --trace-warnings node_modules/.bin/jest --runInBand --no-cache --forceExit --config jest-e2e.config.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.1",
