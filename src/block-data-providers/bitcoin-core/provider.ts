@@ -2,7 +2,11 @@ import { ConfigService } from '@nestjs/config';
 import { BitcoinCoreConfig } from '@/configuration.model';
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { BitcoinNetwork } from '@/common/enum';
-import { SATS_PER_BTC, TAPROOT_ACTIVATION_HEIGHT } from '@/common/constants';
+import {
+    BITCOIN_CORE_FULL_VERBOSITY_VERSION,
+    SATS_PER_BTC,
+    TAPROOT_ACTIVATION_HEIGHT,
+} from '@/common/constants';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import {
     IndexerService,
@@ -19,6 +23,7 @@ import {
     Output,
     RPCRequestBody,
     Input,
+    NetworkInfo,
 } from '@/block-data-providers/bitcoin-core/interfaces';
 import axios from 'axios';
 import * as currency from 'currency.js';
@@ -86,9 +91,15 @@ export class BitcoinCoreProvider
             return;
         }
 
+        const networkInfo = await this.getNetworkInfo();
+        const verbosityLevel = this.versionToVerbosity(networkInfo.version);
+
         let height = state.indexedBlockHeight + 1;
         for (height; height <= tipHeight; height++) {
-            const transactions = await this.processBlock(height);
+            const transactions = await this.processBlock(
+                height,
+                verbosityLevel,
+            );
 
             for (const transaction of transactions) {
                 const { txid, vin, vout, blockHeight, blockHash } = transaction;
@@ -106,6 +117,13 @@ export class BitcoinCoreProvider
         }
 
         this.isSyncing = false;
+    }
+
+    private async getNetworkInfo(): Promise<NetworkInfo> {
+        return this.request({
+            method: 'getnetworkinfo',
+            params: [],
+        });
     }
 
     private async getTipHeight(): Promise<number> {
@@ -139,14 +157,17 @@ export class BitcoinCoreProvider
         });
     }
 
-    public async processBlock(height: number): Promise<Transaction[]> {
+    public async processBlock(
+        height: number,
+        verbosityLevel: number,
+    ): Promise<Transaction[]> {
         const parsedTransactionList: Transaction[] = [];
         const blockHash = await this.getBlockHash(height);
         this.logger.debug(
             `Processing block at height ${height}, hash ${blockHash}`,
         );
 
-        const block = await this.getBlock(blockHash, 2);
+        const block = await this.getBlock(blockHash, verbosityLevel);
 
         for (let i = 1; i < block.tx.length; i++) {
             const parsedTransaction = await this.parseTransaction(
@@ -185,13 +206,20 @@ export class BitcoinCoreProvider
     private async parseTransactionInput(
         txnInput: Input,
     ): Promise<TransactionInput> {
-        const prevTransaction = await this.getRawTransaction(
-            txnInput.txid,
-            true,
-        );
+        let prevOutScript: string;
         const vout = txnInput.vout;
-        const prevOutScript = prevTransaction.vout.find((out) => out.n == vout)
-            .scriptPubKey.hex;
+
+        if (txnInput.prevout != undefined) {
+            prevOutScript = txnInput.prevout.scriptPubKey.hex;
+        } else {
+            const prevTransaction = await this.getRawTransaction(
+                txnInput.txid,
+                true,
+            );
+
+            prevOutScript = prevTransaction.vout.find((out) => out.n == vout)
+                .scriptPubKey.hex;
+        }
 
         return {
             txid: txnInput.txid,
@@ -242,5 +270,9 @@ export class BitcoinCoreProvider
 
     private convertToSatoshi(amount: number): number {
         return currency(amount, { precision: 8 }).multiply(SATS_PER_BTC).value;
+    }
+
+    private versionToVerbosity(version: number): 2 | 3 {
+        return version >= BITCOIN_CORE_FULL_VERBOSITY_VERSION ? 3 : 2;
     }
 }

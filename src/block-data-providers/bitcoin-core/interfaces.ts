@@ -13,11 +13,20 @@ export interface BlockTransaction {
     vout: Output[];
 }
 
+export interface NetworkInfo {
+    version: number;
+}
+
 export interface Input {
     txid: string;
     vout: number;
     scriptSig: {
         hex: string;
+    };
+    prevout?: {
+        scriptPubKey: {
+            hex: string;
+        };
     };
     txinwitness: string[];
 }
