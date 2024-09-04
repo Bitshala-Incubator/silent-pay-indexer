@@ -1,5 +1,10 @@
 export enum ServiceStatus {
     HEALTHY = 'HEALTHY',
+    PROCESSED = 'PROCESSED',
+    INVALID = 'INVALID',
+    DELAYED = 'DELAYED',
+    REORG_HANDLED = 'REORG_HANDLED',
+    INDEX_VERIFIED = 'INDEX_VERIFIED',
 }
 
 export enum ProviderType {
