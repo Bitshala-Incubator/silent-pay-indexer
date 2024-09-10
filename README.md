@@ -14,6 +14,8 @@ A service that simplifies receiving Bitcoin silent payments for wallets and appl
   - [:electric\_plug: Installation](#electric_plug-installation)
     - [:notebook: Prerequisites](#notebook-prerequisites)
     - [:wrench: Configuration](#wrench-configuration)
+    - [:notebook: Prerequisites](#notebook-prerequisites-1)
+    - [:wrench: Configuration](#wrench-configuration-1)
     - [:rocket: Running the Application](#rocket-running-the-application)
   - [:file\_folder: File Structure](#file_folder-file-structure)
     - [src Directory Structure](#src-directory-structure)
@@ -113,7 +115,7 @@ This is a basic overview of the project structure, it reflects the main componen
 | **`indexer`**              | Contains the core logic for indexing silent payments                              |
 | **`operation-state`**      | Handles the state of indexing operations                                          |
 | **`transactions`**         | Handles transaction-related logic and API querying requests                       |
-| **`configuration`**              | Handles project configuration                                                     |
+| configuration              | Handles project configuration                                                     |
 
 ## :cherry_blossom: Community
 
@@ -123,7 +125,7 @@ Dev discussions predominantly happen via FOSS best practices, and by using Githu
 
 ### :fire: Contribution
 
-We welcome and encourage contributions to this actively developed project! For details on contributing, please refer to [CONTRIBUTING.md](CONTRIBUTING.md).
+The project is under active development by a few motivated Bitcoin devs. Any contribution for features, tests, docs and other fixes/upgrades is encouraged and welcomed. The maintainers will use the PR thread to provide reviews and suggestions, and are generally proactive at merging good contributions.
 
 Few directions for new contributors:
 
