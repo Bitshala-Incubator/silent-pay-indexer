@@ -43,7 +43,7 @@ You can start a Bitcoin node by using Docker or Polar:
 - **Docker**: Use the Docker Compose file located in the e2e test folder. Be sure to modify the dev.config.yaml file by changing the RPC user to "alice", the RPC password to "password", and the port to 18443.
 
   ```sh
-  docker compose up -d
+  docker compose -f "./e2e/helpers/docker/docker-compose.yml" up -d
   ```
 
 - **Polar**: Download and set up [Polar](https://lightningpolar.com/) to create a local Bitcoin network with multiple nodes easily.
@@ -128,7 +128,7 @@ When making commits, adhere to the following guidelines:
 - **refactor:** Code changes that neither fix bugs nor add features
 - **test:** Adding or updating tests
 
-Guidelines:
+**Guidelines:**
 - Use the present tense ("Add feature" rather than "Added feature").
 - Employ the imperative mood ("Move cursor to..." instead of "Moves cursor to...").
 - Limit the first line to 72 characters or fewer.

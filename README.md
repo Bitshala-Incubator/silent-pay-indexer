@@ -113,7 +113,7 @@ This is a basic overview of the project structure, it reflects the main componen
 | **`indexer`**              | Contains the core logic for indexing silent payments                              |
 | **`operation-state`**      | Handles the state of indexing operations                                          |
 | **`transactions`**         | Handles transaction-related logic and API querying requests                       |
-| **`configuration`**              | Handles project configuration                                                     |
+| **`configuration`**        | Handles project configuration                                                     |
 
 ## :cherry_blossom: Community
 
