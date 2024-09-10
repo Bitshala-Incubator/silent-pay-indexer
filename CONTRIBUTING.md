@@ -40,7 +40,7 @@ npm install
 
 You can start a Bitcoin node by using Docker or Polar:
 
-- **Docker**: Use the Docker Compose file located in the e2e test folder. Be sure to modify the dev.config.yaml file by changing the RPC user to "alice", the RPC password to "password", and the port to 18443.
+- **Docker**: Use the Docker Compose file located in the e2e test folder. Be sure to modify the `config/dev.config.yaml` file by changing the `port` to `18443`.
 
   ```sh
   docker compose -f "./e2e/helpers/docker/docker-compose.yml" up -d
