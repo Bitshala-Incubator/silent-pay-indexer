@@ -4,21 +4,32 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Transaction } from '@/transactions/transaction.entity';
 import { IndexerService } from '@/indexer/indexer.service';
 import { testData } from '@/indexer/indexer.fixture';
+import { DataSource, Repository } from 'typeorm';
 
 describe('IndexerService', () => {
     let service: IndexerService;
-    const saveMock = jest.fn();
+    let repository: Repository<Transaction>;
+    let dataSource: DataSource;
 
-    beforeAll(async () => {
+    beforeEach(async () => {
+        dataSource = new DataSource({
+            type: 'sqlite',
+            database: ':memory:',
+            dropSchema: true,
+            entities: [Transaction],
+            synchronize: true,
+            logging: false,
+        });
+        await dataSource.initialize();
+        repository = dataSource.getRepository(Transaction);
+
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 IndexerService,
                 TransactionsService,
                 {
                     provide: getRepositoryToken(Transaction),
-                    useValue: {
-                        save: saveMock,
-                    },
+                    useValue: repository,
                 },
             ],
         }).compile();
@@ -30,24 +41,30 @@ describe('IndexerService', () => {
         expect(service).toBeDefined();
     });
 
-    it.each(testData)('should index transaction', async (testData) => {
-        await service.index(
-            '0000000000000000000000000000000000000000000000000000000000000000',
-            testData.vin,
-            testData.vout,
-            0,
-            '0000000000000000000000000000000000000000000000000000000000000000',
-        );
-
-        if (testData.scanTweak) {
-            expect(saveMock).toHaveBeenCalled();
-            expect(saveMock.mock.calls[0][0].scanTweak).toBe(
-                testData.scanTweak,
+    it.each(testData)(
+        'should validate that scanTweaks are created for only valid transactions',
+        async (transaction) => {
+            await service.index(
+                transaction.txid,
+                transaction.vin,
+                transaction.vout,
+                0,
+                '0000000000000000000000000000000000000000000000000000000000000000',
             );
-        } else {
-            expect(saveMock).not.toHaveBeenCalled();
-        }
 
-        jest.clearAllMocks();
+            const transactionEntity = await repository.findOne({
+                where: { id: transaction.txid },
+            });
+
+            if (transaction.scanTweak) {
+                expect(transactionEntity.scanTweak).toBe(transaction.scanTweak);
+            } else {
+                expect(transactionEntity).toBeNull();
+            }
+        },
+    );
+
+    afterEach(async () => {
+        await dataSource.destroy();
     });
 });
