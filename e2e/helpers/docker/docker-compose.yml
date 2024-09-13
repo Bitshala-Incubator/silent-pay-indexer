@@ -8,7 +8,8 @@ services:
         rest=1
         rpcbind=0.0.0.0:18443
         rpcallowip=0.0.0.0/0
-        rpcauth=polaruser:29fc7c114646a46c59c029eb076a0967$a985383e5b88d84acf241765c558c408b3fed0ab887575568b4e7fb8e77af6e4
+        rpcuser=polaruser
+        rpcpassword=password
         debug=1
         logips=1
         logtimemicros=1
