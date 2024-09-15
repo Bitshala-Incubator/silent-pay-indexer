@@ -117,3 +117,33 @@ export const extractPubKeyFromScript = (
 
     return null;
 };
+
+export const encodeVarInt = (
+    value: number,
+    buffer: Buffer,
+    offset = 0,
+): number => {
+    if (value < 0xfd) {
+        buffer.writeUInt8(value, offset);
+        return offset + 1;
+    } else if (value <= 0xffff) {
+        buffer.writeUInt8(0xfd, offset);
+        buffer.writeUInt16LE(value, offset + 2);
+        return offset + 3;
+    } else if (value <= 0xffffffff) {
+        buffer.writeUInt8(0xfe, offset);
+        buffer.writeUInt32LE(value, offset + 4);
+        return offset + 5;
+    } else {
+        buffer.writeUInt8(0xff, offset);
+        buffer.writeBigUInt64LE(BigInt(value), offset + 8);
+        return offset + 9;
+    }
+};
+
+export const varIntSize = (value: number): number => {
+    if (value < 0xfd) return 1;
+    else if (value <= 0xffff) return 3;
+    else if (value <= 0xffffffff) return 5;
+    else return 9;
+};

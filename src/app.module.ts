@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from '@/configuration';
 import { TransactionsModule } from '@/transactions/transactions.module';
+import { SilentBlocksModule } from '@/silent-blocks/silent-blocks.module';
 import { OperationStateModule } from '@/operation-state/operation-state.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BlockProviderModule } from '@/block-data-providers/block-provider.module';
@@ -28,6 +29,7 @@ import { BlockProviderModule } from '@/block-data-providers/block-provider.modul
             }),
         }),
         TransactionsModule,
+        SilentBlocksModule,
         OperationStateModule,
         BlockProviderModule,
     ],
