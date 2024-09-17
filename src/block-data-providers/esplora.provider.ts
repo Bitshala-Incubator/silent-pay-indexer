@@ -12,6 +12,7 @@ import { AxiosRetryConfig, makeRequest } from '@/common/request';
 type EsploraOperationState = {
     currentBlockHeight: number;
     indexedBlockHeight: number;
+    lastProcessedTxIndex: number;
 };
 
 type EsploraTransactionInput = {
@@ -114,6 +115,7 @@ export class EsploraProvider
                     BitcoinNetwork.MAINNET
                         ? TAPROOT_ACTIVATION_HEIGHT - 1
                         : 0,
+                lastProcessedTxIndex: 0, // we dont take coinbase txn in account
             };
             await this.setState(state);
         }
@@ -140,7 +142,7 @@ export class EsploraProvider
             }
 
             for (
-                let height = state.indexedBlockHeight + 1;
+                let height = state.indexedBlockHeight;
                 height <= tipHeight;
                 height++
             ) {
@@ -150,9 +152,6 @@ export class EsploraProvider
                 );
 
                 await this.processBlock(height, blockHash);
-
-                state.indexedBlockHeight = height;
-                await this.setState(state);
             }
         } finally {
             this.isSyncing = false;
@@ -160,33 +159,56 @@ export class EsploraProvider
     }
 
     private async processBlock(height: number, hash: string) {
+        const state = await this.getState();
         const txids = await this.getTxidsForBlock(hash);
 
-        for (let i = 1; i < txids.length; i += this.batchSize) {
+        for (
+            let i = state.lastProcessedTxIndex + 1;
+            i < txids.length;
+            i += this.batchSize
+        ) {
             const batch = txids.slice(
                 i,
                 Math.min(i + this.batchSize, txids.length),
             );
 
-            await Promise.all(
-                batch.map(async (txid) => {
-                    const tx = await this.getTx(txid);
-                    const vin: TransactionInput[] = tx.vin.map((input) => ({
-                        txid: input.txid,
-                        vout: input.vout,
-                        scriptSig: input.scriptsig,
-                        prevOutScript: input.prevout.scriptpubkey,
-                        witness: input.witness,
-                    }));
-                    const vout = tx.vout.map((output) => ({
-                        scriptPubKey: output.scriptpubkey,
-                        value: output.value,
-                    }));
+            try {
+                await Promise.all(
+                    batch.map(async (txid) => {
+                        const tx = await this.getTx(txid);
+                        const vin: TransactionInput[] = tx.vin.map((input) => ({
+                            txid: input.txid,
+                            vout: input.vout,
+                            scriptSig: input.scriptsig,
+                            prevOutScript: input.prevout.scriptpubkey,
+                            witness: input.witness,
+                        }));
+                        const vout = tx.vout.map((output) => ({
+                            scriptPubKey: output.scriptpubkey,
+                            value: output.value,
+                        }));
 
-                    await this.indexTransaction(txid, vin, vout, height, hash);
-                }, this),
-            );
+                        await this.indexTransaction(
+                            txid,
+                            vin,
+                            vout,
+                            height,
+                            hash,
+                        );
+                    }, this),
+                );
+
+                state.indexedBlockHeight = height;
+                state.lastProcessedTxIndex = i + this.batchSize - 1;
+                await this.setState(state);
+            } catch (error) {
+                this.logger.error(
+                    `Error processing transactions in block at height ${height}, hash ${hash}: ${error.message}`,
+                );
+                throw error;
+            }
         }
+        this.isSyncing = false;
     }
 
     private async getTipHeight(): Promise<number> {
