@@ -1,61 +1,17 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
-import { OperationStateService } from '@/operation-state/operation-state.service';
 import { BaseBlockDataProvider } from '@/block-data-providers/base-block-data-provider.abstract';
-import { TAPROOT_ACTIVATION_HEIGHT } from '@/common/constants';
+import { AxiosRetryConfig, makeRequest } from '@/common/request';
 import { ConfigService } from '@nestjs/config';
+import { IndexerService, TransactionInput } from '@/indexer/indexer.service';
+import { OperationStateService } from '@/operation-state/operation-state.service';
 import { BitcoinNetwork } from '@/common/enum';
 import { URL } from 'url';
+import {
+    EsploraOperationState,
+    EsploraTransaction,
+} from '@/block-data-providers/esplora/interface';
+import { TAPROOT_ACTIVATION_HEIGHT } from '@/common/constants';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { IndexerService, TransactionInput } from '@/indexer/indexer.service';
-import { AxiosRetryConfig, makeRequest } from '@/common/request';
-
-type EsploraOperationState = {
-    currentBlockHeight: number;
-    indexedBlockHeight: number;
-    lastProcessedTxIndex: number;
-};
-
-type EsploraTransactionInput = {
-    txid: string;
-    vout: number;
-    prevout: {
-        scriptpubkey: string;
-        scriptpubkey_asm: string;
-        scriptpubkey_type: string;
-        scriptpubkey_address: string;
-        value: number;
-    };
-    scriptsig: string;
-    scriptsig_asm: string;
-    witness: string[];
-    is_coinbase: boolean;
-    sequence: number;
-};
-
-type EsploraTransactionOutput = {
-    scriptpubkey: string;
-    scriptpubkey_asm: string;
-    scriptpubkey_type: string;
-    scriptpubkey_address: string;
-    value: number;
-};
-
-type EsploraTransaction = {
-    txid: string;
-    version: number;
-    locktime: number;
-    vin: EsploraTransactionInput[];
-    vout: EsploraTransactionOutput[];
-    size: number;
-    weight: number;
-    fee: number;
-    status: {
-        confirmed: boolean;
-        block_height: number;
-        block_hash: string;
-        block_time: number;
-    };
-};
 
 @Injectable()
 export class EsploraProvider

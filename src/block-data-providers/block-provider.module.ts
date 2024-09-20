@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { EsploraProvider } from '@/block-data-providers/esplora.provider';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { OperationStateModule } from '@/operation-state/operation-state.module';
 import { OperationStateService } from '@/operation-state/operation-state.service';
@@ -7,6 +6,7 @@ import { IndexerModule } from '@/indexer/indexer.module';
 import { IndexerService } from '@/indexer/indexer.service';
 import { ProviderType } from '@/common/enum';
 import { BitcoinCoreProvider } from '@/block-data-providers/bitcoin-core/provider';
+import { EsploraProvider } from '@/block-data-providers/esplora/provider';
 
 @Module({
     imports: [OperationStateModule, IndexerModule, ConfigModule],
