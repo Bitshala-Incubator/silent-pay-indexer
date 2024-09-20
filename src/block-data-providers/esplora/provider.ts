@@ -15,7 +15,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class EsploraProvider
-    extends BaseBlockDataProvider
+    extends BaseBlockDataProvider<EsploraOperationState>
     implements OnApplicationBootstrap
 {
     protected readonly logger = new Logger(EsploraProvider.name);

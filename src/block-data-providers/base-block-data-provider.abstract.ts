@@ -6,7 +6,7 @@ import {
     TransactionOutput,
 } from '@/indexer/indexer.service';
 
-export abstract class BaseBlockDataProvider {
+export abstract class BaseBlockDataProvider<OperationState> {
     protected abstract readonly logger: Logger;
     protected abstract readonly operationStateKey: string;
 
@@ -31,7 +31,7 @@ export abstract class BaseBlockDataProvider {
         );
     }
 
-    async getState(): Promise<Record<string, any>> {
+    async getState(): Promise<OperationState> {
         return (
             await this.operationStateService.getOperationState(
                 this.operationStateKey,
@@ -39,7 +39,7 @@ export abstract class BaseBlockDataProvider {
         )?.state;
     }
 
-    async setState(state: Record<string, any>): Promise<void> {
+    async setState(state: OperationState): Promise<void> {
         await this.operationStateService.setOperationState(
             this.operationStateKey,
             state,

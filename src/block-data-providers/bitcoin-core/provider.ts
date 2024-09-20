@@ -31,7 +31,7 @@ import { AxiosRetryConfig, makeRequest } from '@/common/request';
 
 @Injectable()
 export class BitcoinCoreProvider
-    extends BaseBlockDataProvider
+    extends BaseBlockDataProvider<BitcoinCoreOperationState>
     implements OnApplicationBootstrap
 {
     protected readonly logger = new Logger(BitcoinCoreProvider.name);
