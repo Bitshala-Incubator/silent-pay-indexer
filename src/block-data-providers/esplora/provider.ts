@@ -14,6 +14,8 @@ import { TAPROOT_ACTIVATION_HEIGHT } from '@/common/constants';
 import { BlockStateService } from '@/block-state/block-state.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { DbTransactionService } from '@/db-transaction/db-transaction.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { INDEXED_BLOCK_EVENT } from '@/common/events';
 
 @Injectable()
 export class EsploraProvider
@@ -33,6 +35,7 @@ export class EsploraProvider
         operationStateService: OperationStateService,
         blockStateService: BlockStateService,
         private readonly dbTransactionService: DbTransactionService,
+        protected readonly eventEmitter: EventEmitter2,
     ) {
         super(
             configService,
@@ -189,6 +192,8 @@ export class EsploraProvider
                         manager,
                     );
                 });
+
+                this.eventEmitter.emit(INDEXED_BLOCK_EVENT, height);
             } catch (error) {
                 this.logger.error(
                     `Error processing transactions in block at height ${height}, hash ${hash}: ${error.message}`,

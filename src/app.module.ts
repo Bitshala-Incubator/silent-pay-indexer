@@ -9,10 +9,12 @@ import { SilentBlocksModule } from '@/silent-blocks/silent-blocks.module';
 import { OperationStateModule } from '@/operation-state/operation-state.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BlockProviderModule } from '@/block-data-providers/block-provider.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
     imports: [
         ScheduleModule.forRoot(),
+        EventEmitterModule.forRoot(),
         ConfigModule.forRoot({
             ignoreEnvFile: true,
             load: [configuration],

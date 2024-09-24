@@ -30,6 +30,8 @@ import * as currency from 'currency.js';
 import { AxiosRetryConfig, makeRequest } from '@/common/request';
 import { BlockStateService } from '@/block-state/block-state.service';
 import { DbTransactionService } from '@/db-transaction/db-transaction.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { INDEXED_BLOCK_EVENT } from '@/common/events';
 
 @Injectable()
 export class BitcoinCoreProvider
@@ -48,6 +50,7 @@ export class BitcoinCoreProvider
         operationStateService: OperationStateService,
         blockStateService: BlockStateService,
         private readonly dbTransactionService: DbTransactionService,
+        protected readonly eventEmitter: EventEmitter2,
     ) {
         super(
             configService,
@@ -156,6 +159,8 @@ export class BitcoinCoreProvider
                         manager,
                     );
                 });
+
+                this.eventEmitter.emit(INDEXED_BLOCK_EVENT, height);
             }
         } finally {
             this.isSyncing = false;

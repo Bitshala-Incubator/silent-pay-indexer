@@ -14,6 +14,7 @@ import {
 import { Test, TestingModule } from '@nestjs/testing';
 import { BlockStateService } from '@/block-state/block-state.service';
 import { DbTransactionService } from '@/db-transaction/db-transaction.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('Bitcoin Core Provider', () => {
     let provider: BitcoinCoreProvider;
@@ -57,6 +58,10 @@ describe('Bitcoin Core Provider', () => {
                     useValue: {
                         execute: jest.fn(),
                     },
+                },
+                {
+                    provide: EventEmitter2,
+                    useValue: jest.fn(),
                 },
             ],
         }).compile();

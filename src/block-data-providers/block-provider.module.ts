@@ -11,6 +11,7 @@ import { BlockStateService } from '@/block-state/block-state.service';
 import { BlockStateModule } from '@/block-state/block-state.module';
 import { DbTransactionModule } from '@/db-transaction/db-transaction.module';
 import { DbTransactionService } from '@/db-transaction/db-transaction.service';
+import { EventEmitter2, EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
     imports: [
@@ -19,6 +20,7 @@ import { DbTransactionService } from '@/db-transaction/db-transaction.service';
         ConfigModule,
         BlockStateModule,
         DbTransactionModule,
+        EventEmitterModule,
     ],
     controllers: [],
     providers: [
@@ -30,6 +32,7 @@ import { DbTransactionService } from '@/db-transaction/db-transaction.service';
                 OperationStateService,
                 BlockStateService,
                 DbTransactionService,
+                EventEmitter2,
             ],
             useFactory: (
                 configService: ConfigService,
@@ -37,6 +40,7 @@ import { DbTransactionService } from '@/db-transaction/db-transaction.service';
                 operationStateService: OperationStateService,
                 blockStateService: BlockStateService,
                 dbTransactionService: DbTransactionService,
+                eventEmitter: EventEmitter2,
             ) => {
                 switch (configService.get<ProviderType>('providerType')) {
                     case ProviderType.ESPLORA:
@@ -46,6 +50,7 @@ import { DbTransactionService } from '@/db-transaction/db-transaction.service';
                             operationStateService,
                             blockStateService,
                             dbTransactionService,
+                            eventEmitter,
                         );
                     case ProviderType.BITCOIN_CORE_RPC:
                         return new BitcoinCoreProvider(
@@ -54,6 +59,7 @@ import { DbTransactionService } from '@/db-transaction/db-transaction.service';
                             operationStateService,
                             blockStateService,
                             dbTransactionService,
+                            eventEmitter,
                         );
                     default:
                         throw Error('unrecognised provider type in config');
