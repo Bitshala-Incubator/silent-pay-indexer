@@ -28,6 +28,8 @@ import {
 import { AxiosRequestConfig } from 'axios';
 import * as currency from 'currency.js';
 import { AxiosRetryConfig, makeRequest } from '@/common/request';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { INDEXED_BLOCK_EVENT } from '@/common/events';
 
 @Injectable()
 export class BitcoinCoreProvider
@@ -44,6 +46,7 @@ export class BitcoinCoreProvider
         private readonly configService: ConfigService,
         indexerService: IndexerService,
         operationStateService: OperationStateService,
+        protected readonly eventEmitter: EventEmitter2,
     ) {
         super(indexerService, operationStateService);
 
@@ -123,6 +126,8 @@ export class BitcoinCoreProvider
 
                 state.indexedBlockHeight = height;
                 await this.setState(state);
+
+                this.eventEmitter.emit(INDEXED_BLOCK_EVENT, height);
             }
         } finally {
             this.isSyncing = false;

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionsService } from '@/transactions/transactions.service';
 import { SilentBlocksService } from '@/silent-blocks/silent-blocks.service';
 import { silentBlockEncodingFixture } from '@/silent-blocks/silent-blocks.service.fixtures';
+import { SilentBlocksGateway } from '@/silent-blocks/silent-blocks.gateway';
 import { DataSource, Repository } from 'typeorm';
 import { Transaction } from '@/transactions/transaction.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -30,6 +31,10 @@ describe('SilentBlocksService', () => {
                 {
                     provide: getRepositoryToken(Transaction),
                     useValue: transactionRepository,
+                },
+                {
+                    provide: SilentBlocksGateway,
+                    useValue: jest.fn(),
                 },
             ],
         }).compile();

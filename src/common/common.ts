@@ -147,3 +147,7 @@ export const varIntSize = (value: number): number => {
     else if (value <= 0xffffffff) return 5;
     else return 9;
 };
+
+export const delay = (ms: number): Promise<void> => {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+};

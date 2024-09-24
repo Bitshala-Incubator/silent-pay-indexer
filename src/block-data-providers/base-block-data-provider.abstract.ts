@@ -1,5 +1,6 @@
 import { OperationStateService } from '@/operation-state/operation-state.service';
 import { Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
     IndexerService,
     TransactionInput,
@@ -7,6 +8,7 @@ import {
 } from '@/indexer/indexer.service';
 
 export abstract class BaseBlockDataProvider<OperationState> {
+    protected readonly eventEmitter: EventEmitter2 = new EventEmitter2();
     protected abstract readonly logger: Logger;
     protected abstract readonly operationStateKey: string;
 

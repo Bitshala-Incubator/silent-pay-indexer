@@ -12,6 +12,7 @@ import {
     rawTransactions,
 } from '@/block-data-providers/bitcoin-core/provider-fixtures';
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('Bitcoin Core Provider', () => {
     let provider: BitcoinCoreProvider;
@@ -45,6 +46,10 @@ describe('Bitcoin Core Provider', () => {
                     useValue: {
                         getOperationState: jest.fn(),
                     },
+                },
+                {
+                    provide: EventEmitter2,
+                    useValue: jest.fn(),
                 },
             ],
         }).compile();
