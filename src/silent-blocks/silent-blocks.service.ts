@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Transaction } from '@/transactions/transaction.entity';
 import { TransactionsService } from '@/transactions/transactions.service';
 import { SILENT_PAYMENT_BLOCK_TYPE } from '@/common/constants';
-import { encodeVarInt, varIntSize } from '@/common/common';
+import { encodeVarInt, varIntSize, delay } from '@/common/common';
 import { SilentBlocksGateway } from '@/silent-blocks/silent-blocks.gateway';
 import { OnEvent } from '@nestjs/event-emitter';
 
@@ -17,7 +17,8 @@ export class SilentBlocksService {
 
     @OnEvent('blockIndexed')
     async handleBlockIndexedEvent(blockHeight: number) {
-        console.log("hello motherfucker ", blockHeight);
+        this.logger.log(`New block indexed: ${blockHeight}`);
+        await delay(1000);
         const silentBlock = await this.getSilentBlockByHeight(blockHeight);
         this.silentBlocksGateway.broadcastSilentBlock(silentBlock);
     }

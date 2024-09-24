@@ -2,12 +2,12 @@ db:
   path: ./.silent-pay-indexer/db/database.sqlite
   synchronize: true
 app:
-  port: 3002
+  port: 3000
   network: regtest
   requestRetry:
     delay: 3000
     count: 3
-providerType: BITCOIN_CORE_RPC
+providerType: ESPLORA
 esplora:
   url: https://blockstream.info
   batchSize: 5
@@ -17,4 +17,3 @@ bitcoinCore:
   rpcPass: polarpass
   rpcUser: polaruser
   rpcPort: 18445
-    
