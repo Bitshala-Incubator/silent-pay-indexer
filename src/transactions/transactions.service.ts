@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Transaction } from '@/transactions/transaction.entity';
-import { Repository } from 'typeorm';
+import { DeleteResult, Repository } from 'typeorm';
 
 @Injectable()
 export class TransactionsService {
@@ -22,5 +22,11 @@ export class TransactionsService {
 
     async saveTransaction(transaction: Transaction): Promise<Transaction> {
         return this.transactionRepository.save(transaction);
+    }
+
+    async deleteTransactionByBlockHash(
+        blockHash: string,
+    ): Promise<DeleteResult> {
+        return this.transactionRepository.delete({ blockHash });
     }
 }

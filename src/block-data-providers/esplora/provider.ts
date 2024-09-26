@@ -11,7 +11,8 @@ import {
     EsploraTransaction,
 } from '@/block-data-providers/esplora/interface';
 import { TAPROOT_ACTIVATION_HEIGHT } from '@/common/constants';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule';
+import { TransactionsService } from '@/transactions/transactions.service';
 
 @Injectable()
 export class EsploraProvider
@@ -26,11 +27,19 @@ export class EsploraProvider
     private readonly batchSize: number;
 
     constructor(
-        private readonly configService: ConfigService,
+        configService: ConfigService,
         indexerService: IndexerService,
         operationStateService: OperationStateService,
+        transactionService: TransactionsService,
+        schedulerRegistry: SchedulerRegistry,
     ) {
-        super(indexerService, operationStateService);
+        super(
+            configService,
+            indexerService,
+            operationStateService,
+            transactionService,
+            schedulerRegistry,
+        );
 
         this.batchSize = this.configService.get<number>('esplora.batchSize');
 
@@ -66,6 +75,7 @@ export class EsploraProvider
             this.logger.log('No previous state found. Starting from scratch.');
             const state: EsploraOperationState = {
                 currentBlockHeight: 0,
+                blockCache: {},
                 indexedBlockHeight:
                     this.configService.get<BitcoinNetwork>('app.network') ===
                     BitcoinNetwork.MAINNET
@@ -77,7 +87,6 @@ export class EsploraProvider
         }
     }
 
-    @Cron(CronExpression.EVERY_10_SECONDS)
     async sync() {
         if (this.isSyncing) return;
         this.isSyncing = true;
@@ -97,11 +106,9 @@ export class EsploraProvider
                 return;
             }
 
-            for (
-                let height = state.indexedBlockHeight;
-                height <= tipHeight;
-                height++
-            ) {
+            let height = (await this.traceReorg()) + 1;
+
+            for (height; height <= tipHeight; height++) {
                 const blockHash = await this.getBlockHash(height);
                 this.logger.log(
                     `Processing block at height ${height}, hash ${blockHash}`,
@@ -154,9 +161,11 @@ export class EsploraProvider
                     }, this),
                 );
 
-                state.indexedBlockHeight = height;
-                state.lastProcessedTxIndex = i + this.batchSize - 1;
-                await this.setState(state);
+                await this.setState({
+                    indexedBlockHeight: height,
+                    lastProcessedTxIndex: i + this.batchSize - 1,
+                    blockCache: { [height]: hash },
+                });
             } catch (error) {
                 this.logger.error(
                     `Error processing transactions in block at height ${height}, hash ${hash}: ${error.message}`,
@@ -189,7 +198,7 @@ export class EsploraProvider
         );
     }
 
-    private async getBlockHash(height: number): Promise<string> {
+    async getBlockHash(height: number): Promise<string> {
         return makeRequest(
             {
                 method: 'GET',

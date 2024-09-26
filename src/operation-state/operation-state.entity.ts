@@ -7,4 +7,5 @@ export class OperationState {
 
     @Column('simple-json')
     state: any;
+
 }
