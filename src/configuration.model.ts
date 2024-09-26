@@ -40,6 +40,10 @@ class AppConfig {
     @Max(65535)
     port: number;
 
+    @IsInt()
+    @Min(1)
+    schedulerInterval: number;
+
     @IsEnum(BitcoinNetwork)
     network: BitcoinNetwork;
 
