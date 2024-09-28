@@ -5,6 +5,10 @@ import {
     TransactionInput,
     TransactionOutput,
 } from '@/indexer/indexer.service';
+import { TransactionsService } from '@/transactions/transactions.service';
+import { SchedulerRegistry } from '@nestjs/schedule';
+import { CronJob } from 'cron';
+import { ConfigService } from '@nestjs/config';
 
 export interface BaseOperationState {
     indexedBlockHeight: number;
@@ -17,11 +21,28 @@ export abstract class BaseBlockDataProvider<
     protected abstract readonly logger: Logger;
     protected abstract readonly operationStateKey: string;
     protected cacheSize = 6;
+    protected readonly CRON_JOB_NAME = 'providerSync';
 
     protected constructor(
+        protected readonly configService: ConfigService,
         private readonly indexerService: IndexerService,
         private readonly operationStateService: OperationStateService,
-    ) {}
+        private readonly transactionService: TransactionsService,
+        private readonly schedulerRegistry: SchedulerRegistry,
+    ) {
+        const schedulerIntervalInSeconds = this.configService.get<string>(
+            'app.schedulerInterval',
+        );
+
+        const job = new CronJob(
+            `*/${schedulerIntervalInSeconds} * * * * *`,
+            () => this.sync(),
+        );
+        this.schedulerRegistry.addCronJob(this.CRON_JOB_NAME, job);
+        job.start();
+    }
+
+    abstract sync(): void;
 
     async indexTransaction(
         txid: string,
@@ -48,7 +69,7 @@ export abstract class BaseBlockDataProvider<
     }
 
     async setState(partialState: Partial<OperationState>): Promise<void> {
-        const oldState = await this.getState();
+        const oldState = (await this.getState()) || ({} as OperationState);
 
         if (partialState.blockCache) {
             const updatedBlockCache = {
@@ -57,7 +78,7 @@ export abstract class BaseBlockDataProvider<
             };
 
             if (this.cacheSize < Object.keys(updatedBlockCache).length) {
-                delete updatedBlockCache[oldState.indexedBlockHeight];
+                delete updatedBlockCache[oldState.indexedBlockHeight - 5];
             }
 
             partialState.blockCache = updatedBlockCache;
@@ -80,6 +101,10 @@ export abstract class BaseBlockDataProvider<
         const { indexedBlockHeight, blockCache } = await this.getState();
         let counter = indexedBlockHeight;
 
+        if (Object.keys(blockCache).length === 0) {
+            return indexedBlockHeight;
+        }
+
         while (true) {
             const storedBlockHash = blockCache[counter];
 
@@ -92,9 +117,20 @@ export abstract class BaseBlockDataProvider<
             if (storedBlockHash === fetchedBlockHash) {
                 return counter;
             }
+            console.log(
+                'reorg found at count: ',
+                counter,
+                ' and hash: ',
+                storedBlockHash,
+                ' ',
+                fetchedBlockHash,
+            );
+
+            await this.transactionService.deleteTransactionByBlockHash(
+                storedBlockHash,
+            );
 
             --counter;
         }
     }
-
 }

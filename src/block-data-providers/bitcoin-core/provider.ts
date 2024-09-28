@@ -7,7 +7,7 @@ import {
     SATS_PER_BTC,
     TAPROOT_ACTIVATION_HEIGHT,
 } from '@/common/constants';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule';
 import {
     IndexerService,
     TransactionInput,
@@ -28,6 +28,7 @@ import {
 import { AxiosRequestConfig } from 'axios';
 import * as currency from 'currency.js';
 import { AxiosRetryConfig, makeRequest } from '@/common/request';
+import { TransactionsService } from '@/transactions/transactions.service';
 
 @Injectable()
 export class BitcoinCoreProvider
@@ -41,11 +42,19 @@ export class BitcoinCoreProvider
     private retryConfig: AxiosRetryConfig;
 
     public constructor(
-        private readonly configService: ConfigService,
+        configService: ConfigService,
         indexerService: IndexerService,
         operationStateService: OperationStateService,
+        transactionService: TransactionsService,
+        schedulerRegistry: SchedulerRegistry,
     ) {
-        super(indexerService, operationStateService);
+        super(
+            configService,
+            indexerService,
+            operationStateService,
+            transactionService,
+            schedulerRegistry,
+        );
 
         const { protocol, rpcPort, rpcHost } =
             configService.get<BitcoinCoreConfig>('bitcoinCore');
@@ -80,11 +89,11 @@ export class BitcoinCoreProvider
         }
     }
 
-    @Cron(CronExpression.EVERY_10_SECONDS)
     async sync() {
         if (this.isSyncing) return;
         this.isSyncing = true;
 
+        console.log("sync running");
         const state = await this.getState();
         if (!state) {
             throw new Error('State not found');
@@ -105,6 +114,7 @@ export class BitcoinCoreProvider
             const verbosityLevel = this.versionToVerbosity(networkInfo.version);
 
             let height = (await this.traceReorg()) + 1;
+
             for (height; height <= tipHeight; height++) {
                 const [transactions, blockHash] = await this.processBlock(
                     height,
