@@ -3,18 +3,19 @@ db:
   synchronize: true
 app:
   port: 3000
+  schedulerInterval: 10
   network: regtest
   requestRetry:
     delay: 3000
     count: 3
-providerType: ESPLORA
+providerType: BITCOIN_CORE_RPC
 esplora:
   url: https://blockstream.info
   batchSize: 5
 bitcoinCore:
   protocol: http
   rpcHost: 127.0.0.1
-  rpcPass: polarpass
-  rpcUser: polaruser
-  rpcPort: 18445
+  rpcPass: password
+  rpcUser: admin
+  rpcPort: 18443
     
