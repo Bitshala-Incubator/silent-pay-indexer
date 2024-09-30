@@ -11,8 +11,8 @@ import {
     EsploraTransaction,
 } from '@/block-data-providers/esplora/interface';
 import { TAPROOT_ACTIVATION_HEIGHT } from '@/common/constants';
-import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule';
 import { TransactionsService } from '@/transactions/transactions.service';
+import { SchedulerRegistry } from '@nestjs/schedule';
 
 @Injectable()
 export class EsploraProvider
@@ -64,16 +64,16 @@ export class EsploraProvider
     }
 
     async onApplicationBootstrap() {
-        const getState = await this.getState();
-        if (getState) {
+        const currentState = await this.getState();
+        if (currentState) {
             this.logger.log(
                 `Restoring state from previous run: ${JSON.stringify(
-                    getState,
+                    currentState,
                 )}`,
             );
         } else {
             this.logger.log('No previous state found. Starting from scratch.');
-            const state: EsploraOperationState = {
+            const updatedState: EsploraOperationState = {
                 currentBlockHeight: 0,
                 blockCache: {},
                 indexedBlockHeight:
@@ -83,7 +83,7 @@ export class EsploraProvider
                         : 0,
                 lastProcessedTxIndex: 0, // we dont take coinbase txn in account
             };
-            await this.setState(state);
+            await this.setState(currentState, updatedState);
         }
     }
 
@@ -161,7 +161,7 @@ export class EsploraProvider
                     }, this),
                 );
 
-                await this.setState({
+                await this.setState(state, {
                     indexedBlockHeight: height,
                     lastProcessedTxIndex: i + this.batchSize - 1,
                     blockCache: { [height]: hash },
