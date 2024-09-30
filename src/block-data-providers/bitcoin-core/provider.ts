@@ -7,7 +7,7 @@ import {
     SATS_PER_BTC,
     TAPROOT_ACTIVATION_HEIGHT,
 } from '@/common/constants';
-import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule';
+import { SchedulerRegistry } from '@nestjs/schedule';
 import {
     IndexerService,
     TransactionInput,
@@ -66,16 +66,16 @@ export class BitcoinCoreProvider
     }
 
     async onApplicationBootstrap() {
-        const getState = await this.getState();
-        if (getState) {
+        const currentState = await this.getState();
+        if (currentState) {
             this.logger.log(
                 `Restoring state from previous run: ${JSON.stringify(
-                    getState,
+                    currentState,
                 )}`,
             );
         } else {
             this.logger.log('No previous state found. Starting from scratch.');
-            const state: BitcoinCoreOperationState = {
+            const updatedState: BitcoinCoreOperationState = {
                 currentBlockHeight: 0,
                 blockCache: {},
                 indexedBlockHeight:
@@ -85,7 +85,7 @@ export class BitcoinCoreProvider
                         : 0,
             };
 
-            await this.setState(state);
+            await this.setState(currentState, updatedState);
         }
     }
 
@@ -93,7 +93,6 @@ export class BitcoinCoreProvider
         if (this.isSyncing) return;
         this.isSyncing = true;
 
-        console.log("sync running");
         const state = await this.getState();
         if (!state) {
             throw new Error('State not found');
@@ -133,7 +132,7 @@ export class BitcoinCoreProvider
                     );
                 }
 
-                await this.setState({
+                await this.setState(state, {
                     indexedBlockHeight: height,
                     blockCache: { [height]: blockHash },
                 });

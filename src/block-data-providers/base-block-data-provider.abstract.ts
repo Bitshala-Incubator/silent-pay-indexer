@@ -1,5 +1,5 @@
 import { OperationStateService } from '@/operation-state/operation-state.service';
-import { Logger } from '@nestjs/common';
+import { Logger, OnModuleInit } from '@nestjs/common';
 import {
     IndexerService,
     TransactionInput,
@@ -17,11 +17,12 @@ export interface BaseOperationState {
 
 export abstract class BaseBlockDataProvider<
     OperationState extends BaseOperationState,
-> {
+> implements OnModuleInit
+{
     protected abstract readonly logger: Logger;
     protected abstract readonly operationStateKey: string;
-    protected cacheSize = 6;
-    protected readonly CRON_JOB_NAME = 'providerSync';
+    protected readonly cacheSize = 6;
+    protected readonly cronJobName = 'providerSync';
 
     protected constructor(
         protected readonly configService: ConfigService,
@@ -29,20 +30,24 @@ export abstract class BaseBlockDataProvider<
         private readonly operationStateService: OperationStateService,
         private readonly transactionService: TransactionsService,
         private readonly schedulerRegistry: SchedulerRegistry,
-    ) {
-        const schedulerIntervalInSeconds = this.configService.get<string>(
-            'app.schedulerInterval',
-        );
+    ) {}
 
-        const job = new CronJob(
-            `*/${schedulerIntervalInSeconds} * * * * *`,
-            () => this.sync(),
-        );
-        this.schedulerRegistry.addCronJob(this.CRON_JOB_NAME, job);
-        job.start();
+    onModuleInit() {
+        this.initiateCronJob();
     }
 
     abstract sync(): void;
+
+    private initiateCronJob() {
+        const schedulerInterval = this.configService.get<string>(
+            'app.schedulerInterval',
+        );
+
+        const job = new CronJob(schedulerInterval, () => this.sync());
+
+        this.schedulerRegistry.addCronJob(this.cronJobName, job);
+        job.start();
+    }
 
     async indexTransaction(
         txid: string,
@@ -68,24 +73,25 @@ export abstract class BaseBlockDataProvider<
         )?.state;
     }
 
-    async setState(partialState: Partial<OperationState>): Promise<void> {
-        const oldState = (await this.getState()) || ({} as OperationState);
-
+    async setState(
+        currentState: OperationState,
+        partialState: Partial<OperationState>,
+    ): Promise<void> {
         if (partialState.blockCache) {
             const updatedBlockCache = {
-                ...oldState.blockCache,
+                ...currentState.blockCache,
                 ...partialState.blockCache,
             };
 
             if (this.cacheSize < Object.keys(updatedBlockCache).length) {
-                delete updatedBlockCache[oldState.indexedBlockHeight - 5];
+                delete updatedBlockCache[currentState.indexedBlockHeight - 5];
             }
 
             partialState.blockCache = updatedBlockCache;
         }
 
         const newState = {
-            ...oldState,
+            ...currentState,
             ...partialState,
         };
 
@@ -117,14 +123,6 @@ export abstract class BaseBlockDataProvider<
             if (storedBlockHash === fetchedBlockHash) {
                 return counter;
             }
-            console.log(
-                'reorg found at count: ',
-                counter,
-                ' and hash: ',
-                storedBlockHash,
-                ' ',
-                fetchedBlockHash,
-            );
 
             await this.transactionService.deleteTransactionByBlockHash(
                 storedBlockHash,
