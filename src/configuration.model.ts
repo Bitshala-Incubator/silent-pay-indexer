@@ -5,6 +5,7 @@ import {
     IsIn,
     IsInt,
     IsNotEmpty,
+    IsOptional,
     IsString,
     IsUrl,
     Max,
@@ -40,10 +41,6 @@ class AppConfig {
     @Max(65535)
     port: number;
 
-    @IsInt()
-    @Min(1)
-    schedulerInterval: number;
-
     @IsEnum(BitcoinNetwork)
     network: BitcoinNetwork;
 
@@ -51,6 +48,14 @@ class AppConfig {
     @ValidateNested()
     @Type(() => AxiosRetryConfig)
     requestRetry: AxiosRetryConfig;
+
+    @IsOptional()
+    @IsBoolean()
+    verbose?: boolean;
+
+    @IsOptional()
+    @IsBoolean()
+    debug?: boolean;
 }
 
 class EsploraConfig {

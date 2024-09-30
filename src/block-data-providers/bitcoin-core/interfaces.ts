@@ -1,5 +1,4 @@
 import { TransactionInput, TransactionOutput } from '@/indexer/indexer.service';
-import { BaseOperationState } from '@/block-data-providers/base-block-data-provider.abstract';
 
 export interface Block {
     height: number;
@@ -40,10 +39,9 @@ export interface Output {
     };
 }
 
-export interface BitcoinCoreOperationState extends BaseOperationState {
-    currentBlockHeight: number;
+export type BitcoinCoreOperationState = {
     indexedBlockHeight: number;
-}
+};
 
 export type Transaction = {
     txid: string;

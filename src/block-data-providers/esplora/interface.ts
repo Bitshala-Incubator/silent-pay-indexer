@@ -1,7 +1,6 @@
-import { BaseOperationState } from '@/block-data-providers/base-block-data-provider.abstract';
-
-export interface EsploraOperationState extends BaseOperationState {
+export interface EsploraOperationState {
     currentBlockHeight: number;
+    indexedBlockHeight: number;
     lastProcessedTxIndex: number;
 }
 
