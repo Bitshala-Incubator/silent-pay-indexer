@@ -12,6 +12,7 @@ import {
     rawTransactions,
 } from '@/block-data-providers/bitcoin-core/provider-fixtures';
 import { Test, TestingModule } from '@nestjs/testing';
+import { BlockStateService } from '@/block-state/block-state.service';
 
 describe('Bitcoin Core Provider', () => {
     let provider: BitcoinCoreProvider;
@@ -45,6 +46,10 @@ describe('Bitcoin Core Provider', () => {
                     useValue: {
                         getOperationState: jest.fn(),
                     },
+                },
+                {
+                    provide: BlockStateService,
+                    useClass: jest.fn(),
                 },
             ],
         }).compile();

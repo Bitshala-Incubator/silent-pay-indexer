@@ -5,44 +5,20 @@ import {
     TransactionInput,
     TransactionOutput,
 } from '@/indexer/indexer.service';
-import { TransactionsService } from '@/transactions/transactions.service';
-import { SchedulerRegistry } from '@nestjs/schedule';
-import { CronJob } from 'cron';
 import { ConfigService } from '@nestjs/config';
+import { BlockStateService } from '@/block-state/block-state.service';
+import { BlockState } from '@/block-state/block-state.entity';
 
-export interface BaseOperationState {
-    indexedBlockHeight: number;
-    blockCache: Record<number, string>;
-}
-
-export abstract class BaseBlockDataProvider<
-    OperationState extends BaseOperationState,
-> {
+export abstract class BaseBlockDataProvider<OperationState> {
     protected abstract readonly logger: Logger;
     protected abstract readonly operationStateKey: string;
-    protected cacheSize = 6;
-    protected readonly CRON_JOB_NAME = 'providerSync';
 
     protected constructor(
         protected readonly configService: ConfigService,
         private readonly indexerService: IndexerService,
         private readonly operationStateService: OperationStateService,
-        private readonly transactionService: TransactionsService,
-        private readonly schedulerRegistry: SchedulerRegistry,
-    ) {
-        const schedulerIntervalInSeconds = this.configService.get<string>(
-            'app.schedulerInterval',
-        );
-
-        const job = new CronJob(
-            `*/${schedulerIntervalInSeconds} * * * * *`,
-            () => this.sync(),
-        );
-        this.schedulerRegistry.addCronJob(this.CRON_JOB_NAME, job);
-        job.start();
-    }
-
-    abstract sync(): void;
+        protected readonly blockStateService: BlockStateService,
+    ) {}
 
     async indexTransaction(
         txid: string,
@@ -68,69 +44,38 @@ export abstract class BaseBlockDataProvider<
         )?.state;
     }
 
-    async setState(partialState: Partial<OperationState>): Promise<void> {
-        const oldState = (await this.getState()) || ({} as OperationState);
-
-        if (partialState.blockCache) {
-            const updatedBlockCache = {
-                ...oldState.blockCache,
-                ...partialState.blockCache,
-            };
-
-            if (this.cacheSize < Object.keys(updatedBlockCache).length) {
-                delete updatedBlockCache[oldState.indexedBlockHeight - 5];
-            }
-
-            partialState.blockCache = updatedBlockCache;
-        }
-
-        const newState = {
-            ...oldState,
-            ...partialState,
-        };
-
+    async setState(
+        state: OperationState,
+        blockState: BlockState,
+    ): Promise<void> {
         await this.operationStateService.setOperationState(
             this.operationStateKey,
-            newState,
+            state,
         );
+
+        await this.blockStateService.addBlockState(blockState);
     }
 
     abstract getBlockHash(height: number): Promise<string>;
 
     async traceReorg(): Promise<number> {
-        const { indexedBlockHeight, blockCache } = await this.getState();
-        let counter = indexedBlockHeight;
+        let state = await this.blockStateService.getCurrentBlockState();
 
-        if (Object.keys(blockCache).length === 0) {
-            return indexedBlockHeight;
+        if (!state) return null;
+
+        while (state) {
+            const fetchedBlockHash = await this.getBlockHash(state.blockHeight);
+
+            if (state.blockHash === fetchedBlockHash) return state.blockHeight;
+
+            await this.blockStateService.removeState(state);
+
+            this.logger.log(
+                `Reorg found at height: ${state.blockHeight}, Wrong hash: ${state.blockHash}, Correct hash: ${fetchedBlockHash}`,
+            );
+            state = await this.blockStateService.getCurrentBlockState();
         }
 
-        while (true) {
-            const storedBlockHash = blockCache[counter];
-
-            if (storedBlockHash === undefined) {
-                throw new Error('Reorgs levels deep');
-            }
-
-            const fetchedBlockHash = await this.getBlockHash(counter);
-
-            if (storedBlockHash === fetchedBlockHash) {
-                return counter;
-            }
-            console.log(
-                'reorg found at count: ',
-                counter,
-                ' and hash: ',
-                storedBlockHash,
-                ' ',
-                fetchedBlockHash,
-            );
-
-            await this.transactionService.deleteTransactionByBlockHash(
-                storedBlockHash,
-            );
-
-            --counter;
-        }
+        throw new Error('Cannot Reorgs, blockchain state exhausted');
     }
 }

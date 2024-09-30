@@ -3,7 +3,8 @@ db:
   synchronize: true
 app:
   port: 3000
-  schedulerInterval: 10
+  verbose: false
+  debug: true
   network: regtest
   requestRetry:
     delay: 500

@@ -3,7 +3,8 @@ db:
   synchronize: false
 app:
   port: <port>
-  schedulerInterval: <interval> #interval in seconds
+  verbose: <boolean>
+  debug: <boolean>
   network: <network>
   requestRetry:
     delay: <number> # delay in Milliseconds
