@@ -7,18 +7,34 @@ import { IndexerService } from '@/indexer/indexer.service';
 import { ProviderType } from '@/common/enum';
 import { BitcoinCoreProvider } from '@/block-data-providers/bitcoin-core/provider';
 import { EsploraProvider } from '@/block-data-providers/esplora/provider';
+import { TransactionsService } from '@/transactions/transactions.service';
+import { TransactionsModule } from '@/transactions/transactions.module';
+import { SchedulerRegistry } from '@nestjs/schedule';
 
 @Module({
-    imports: [OperationStateModule, IndexerModule, ConfigModule],
+    imports: [
+        OperationStateModule,
+        IndexerModule,
+        ConfigModule,
+        TransactionsModule,
+    ],
     controllers: [],
     providers: [
         {
             provide: 'BlockDataProvider',
-            inject: [ConfigService, IndexerService, OperationStateService],
+            inject: [
+                ConfigService,
+                IndexerService,
+                OperationStateService,
+                TransactionsService,
+                SchedulerRegistry,
+            ],
             useFactory: (
                 configService: ConfigService,
                 indexerService: IndexerService,
                 operationStateService: OperationStateService,
+                transactionService: TransactionsService,
+                schedulerRegistry: SchedulerRegistry,
             ) => {
                 switch (configService.get<ProviderType>('providerType')) {
                     case ProviderType.ESPLORA:
@@ -26,12 +42,16 @@ import { EsploraProvider } from '@/block-data-providers/esplora/provider';
                             configService,
                             indexerService,
                             operationStateService,
+                            transactionService,
+                            schedulerRegistry,
                         );
                     case ProviderType.BITCOIN_CORE_RPC:
                         return new BitcoinCoreProvider(
                             configService,
                             indexerService,
                             operationStateService,
+                            transactionService,
+                            schedulerRegistry,
                         );
                     default:
                         throw Error('unrecognised provider type in config');

@@ -7,7 +7,7 @@ import {
     SATS_PER_BTC,
     TAPROOT_ACTIVATION_HEIGHT,
 } from '@/common/constants';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { SchedulerRegistry } from '@nestjs/schedule';
 import {
     IndexerService,
     TransactionInput,
@@ -28,6 +28,7 @@ import {
 import { AxiosRequestConfig } from 'axios';
 import * as currency from 'currency.js';
 import { AxiosRetryConfig, makeRequest } from '@/common/request';
+import { TransactionsService } from '@/transactions/transactions.service';
 
 @Injectable()
 export class BitcoinCoreProvider
@@ -41,11 +42,19 @@ export class BitcoinCoreProvider
     private retryConfig: AxiosRetryConfig;
 
     public constructor(
-        private readonly configService: ConfigService,
+        configService: ConfigService,
         indexerService: IndexerService,
         operationStateService: OperationStateService,
+        transactionService: TransactionsService,
+        schedulerRegistry: SchedulerRegistry,
     ) {
-        super(indexerService, operationStateService);
+        super(
+            configService,
+            indexerService,
+            operationStateService,
+            transactionService,
+            schedulerRegistry,
+        );
 
         const { protocol, rpcPort, rpcHost } =
             configService.get<BitcoinCoreConfig>('bitcoinCore');
@@ -57,17 +66,18 @@ export class BitcoinCoreProvider
     }
 
     async onApplicationBootstrap() {
-        const getState = await this.getState();
-        if (getState) {
+        const currentState = await this.getState();
+        if (currentState) {
             this.logger.log(
                 `Restoring state from previous run: ${JSON.stringify(
-                    getState,
+                    currentState,
                 )}`,
             );
         } else {
             this.logger.log('No previous state found. Starting from scratch.');
-            const state: BitcoinCoreOperationState = {
+            const updatedState: BitcoinCoreOperationState = {
                 currentBlockHeight: 0,
+                blockCache: {},
                 indexedBlockHeight:
                     this.configService.get<BitcoinNetwork>('app.network') ===
                     BitcoinNetwork.MAINNET
@@ -75,11 +85,10 @@ export class BitcoinCoreProvider
                         : 0,
             };
 
-            await this.setState(state);
+            await this.setState(currentState, updatedState);
         }
     }
 
-    @Cron(CronExpression.EVERY_10_SECONDS)
     async sync() {
         if (this.isSyncing) return;
         this.isSyncing = true;
@@ -91,6 +100,7 @@ export class BitcoinCoreProvider
 
         try {
             const tipHeight = await this.getTipHeight();
+
             if (tipHeight <= state.indexedBlockHeight) {
                 this.logger.debug(
                     `No new blocks found. Current tip height: ${tipHeight}`,
@@ -102,9 +112,10 @@ export class BitcoinCoreProvider
             const networkInfo = await this.getNetworkInfo();
             const verbosityLevel = this.versionToVerbosity(networkInfo.version);
 
-            let height = state.indexedBlockHeight + 1;
+            let height = (await this.traceReorg()) + 1;
+
             for (height; height <= tipHeight; height++) {
-                const transactions = await this.processBlock(
+                const [transactions, blockHash] = await this.processBlock(
                     height,
                     verbosityLevel,
                 );
@@ -121,8 +132,10 @@ export class BitcoinCoreProvider
                     );
                 }
 
-                state.indexedBlockHeight = height;
-                await this.setState(state);
+                await this.setState(state, {
+                    indexedBlockHeight: height,
+                    blockCache: { [height]: blockHash },
+                });
             }
         } finally {
             this.isSyncing = false;
@@ -143,7 +156,7 @@ export class BitcoinCoreProvider
         });
     }
 
-    private async getBlockHash(height: number): Promise<string> {
+    async getBlockHash(height: number): Promise<string> {
         return this.request({
             method: 'getblockhash',
             params: [height],
@@ -170,7 +183,7 @@ export class BitcoinCoreProvider
     public async processBlock(
         height: number,
         verbosityLevel: number,
-    ): Promise<Transaction[]> {
+    ): Promise<[Transaction[], string]> {
         const parsedTransactionList: Transaction[] = [];
         const blockHash = await this.getBlockHash(height);
         this.logger.debug(
@@ -188,7 +201,7 @@ export class BitcoinCoreProvider
             parsedTransactionList.push(parsedTransaction);
         }
 
-        return parsedTransactionList;
+        return [parsedTransactionList, blockHash];
     }
 
     private async parseTransaction(

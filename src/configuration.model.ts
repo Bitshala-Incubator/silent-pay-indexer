@@ -5,15 +5,35 @@ import {
     IsIn,
     IsInt,
     IsNotEmpty,
+    IsOptional,
     IsString,
     IsUrl,
     Max,
     Min,
+    Validate,
     ValidateIf,
     ValidateNested,
+    ValidatorConstraint,
+    ValidatorConstraintInterface,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { BitcoinNetwork, ProviderType } from '@/common/enum';
+import { isValidCron } from 'cron-validator';
+
+@ValidatorConstraint({ name: 'cronSyntax', async: false })
+export class CustomCronSyntax implements ValidatorConstraintInterface {
+    validate(value: string): boolean {
+        return isValidCron(value, {
+            seconds: true,
+            alias: true,
+            allowBlankDay: true,
+        });
+    }
+
+    defaultMessage(): string {
+        return 'Invalid Cron Pattern';
+    }
+}
 
 class DbConfig {
     @IsNotEmpty()
@@ -40,6 +60,9 @@ class AppConfig {
     @Max(65535)
     port: number;
 
+    @Validate(CustomCronSyntax)
+    schedulerInterval: string;
+
     @IsEnum(BitcoinNetwork)
     network: BitcoinNetwork;
 
@@ -47,6 +70,10 @@ class AppConfig {
     @ValidateNested()
     @Type(() => AxiosRetryConfig)
     requestRetry: AxiosRetryConfig;
+
+    @IsOptional()
+    @IsBoolean()
+    verbose?: boolean;
 }
 
 class EsploraConfig {
