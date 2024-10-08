@@ -17,4 +17,3 @@ bitcoinCore:
   rpcPass: polarpass
   rpcUser: polaruser
   rpcPort: 18445
-    

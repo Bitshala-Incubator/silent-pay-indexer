@@ -12,6 +12,7 @@ import {
 } from '@/block-data-providers/esplora/interface';
 import { TAPROOT_ACTIVATION_HEIGHT } from '@/common/constants';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class EsploraProvider
@@ -29,6 +30,8 @@ export class EsploraProvider
         private readonly configService: ConfigService,
         indexerService: IndexerService,
         operationStateService: OperationStateService,
+        private eventEmitter: EventEmitter2,
+
     ) {
         super(indexerService, operationStateService);
 
