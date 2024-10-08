@@ -14,21 +14,18 @@ export class SilentBlocksGateway
 {
     private readonly logger = new Logger(SilentBlocksGateway.name);
 
-
     @WebSocketServer() server: Server;
 
     handleConnection(client: WebSocket) {
         const remoteAddress = (client as any)._socket.remoteAddress;
-        this.logger.log(`Client connected: ${remoteAddress}`);
+        this.logger.debug(`Client connected: ${remoteAddress}`);
     }
 
     handleDisconnect(client: WebSocket) {
         const remoteAddress = (client as any)._socket.remoteAddress;
-        this.logger.log(`Client disconnected: ${remoteAddress}`);
+        this.logger.debug(`Client disconnected: ${remoteAddress}`);
     }
 
-
-    
     // Method to broadcast silent block to all connected clients
     broadcastSilentBlock(silentBlock: Buffer) {
         this.server.clients.forEach((client: WebSocket) => {

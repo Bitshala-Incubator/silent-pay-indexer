@@ -25,7 +25,6 @@ import { EventEmitter2, EventEmitterModule } from '@nestjs/event-emitter';
                 IndexerService,
                 OperationStateService,
                 EventEmitter2,
-                ,
             ],
             useFactory: (
                 configService: ConfigService,
