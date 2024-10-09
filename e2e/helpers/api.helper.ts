@@ -17,8 +17,8 @@ export class ApiHelper {
         return this.makeRequest<TResponseData>({
             method: 'get',
             url: `${this.baseUrl}${path}`,
-            params,
             validateStatus: () => true,
+            ...params,
         });
     }
 

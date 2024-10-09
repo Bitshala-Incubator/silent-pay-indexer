@@ -10,7 +10,7 @@ app:
 providerType: BITCOIN_CORE_RPC
 bitcoinCore:
   protocol: http
-  rpcHost: localhost
-  rpcPass: polarpass
+  rpcHost: 127.0.0.1
+  rpcPass: password
   rpcUser: polaruser
   rpcPort: 18443

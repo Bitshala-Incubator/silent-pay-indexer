@@ -20,7 +20,10 @@ export class SilentBlocksService {
     }
 
     private encodeSilentBlock(transactions: Transaction[]): Buffer {
-        const block = Buffer.alloc(this.getSilentBlockLength(transactions));
+        const block = Buffer.alloc(
+            this.getSilentBlockLength(transactions),
+            'utf8',
+        );
         let cursor = 0;
 
         cursor = block.writeUInt8(SILENT_PAYMENT_BLOCK_TYPE, cursor);
