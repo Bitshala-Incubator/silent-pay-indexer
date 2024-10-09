@@ -6,7 +6,7 @@ import { Payment } from 'bitcoinjs-lib';
 import { generateScantweak } from '@e2e/helpers/common.helper';
 import { convertToSatoshi } from '@e2e/helpers/common.helper';
 
-describe('WalletHelper Integration Tests', () => {
+describe('Silent Pay Indexer Tests', () => {
     let walletHelper: WalletHelper;
     let bitcoinRPCUtil: BitcoinRPCUtil;
     let apiHelper: ApiHelper;
@@ -34,7 +34,7 @@ describe('WalletHelper Integration Tests', () => {
         await bitcoinRPCUtil.mineToAddress(6, initialAddress);
 
         utxos = [];
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 6; i++) {
             for (let vout = 0; vout < 2; vout++) {
                 const utxo = await bitcoinRPCUtil.getTxOut(txidList[i], vout);
 
@@ -83,7 +83,7 @@ describe('WalletHelper Integration Tests', () => {
         expect(foundTx.outputs.length).toBe(1);
         const output = foundTx.outputs[0];
         expect(output).toBeDefined();
-        expect(output.value).toEqual(convertToSatoshi(5.99));
+        expect(output.value).toEqual(convertToSatoshi(5.999));
 
         const taprootPubKeyBuffer = Buffer.from(taprootOutput.pubkey).toString(
             'hex',

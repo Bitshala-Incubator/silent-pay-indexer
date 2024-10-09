@@ -1,5 +1,5 @@
 import { mnemonicToSeedSync } from 'bip39';
-import { BIP32Factory } from 'bip32';
+import { BIP32Interface, fromSeed } from 'bip32';
 import * as ecc from 'tiny-secp256k1';
 import {
     initEccLib,
@@ -12,19 +12,18 @@ import {
 import { convertToSatoshi } from '@e2e/helpers/common.helper';
 
 initEccLib(ecc);
-const bip32 = BIP32Factory(ecc);
 
 export class WalletHelper {
     private mnemonic: string;
     private seed: Buffer;
-    private root: any;
+    private root: BIP32Interface;
 
     constructor(
         mnemonic = 'select approve zebra athlete happy whisper parrot will yellow fortune demand father',
     ) {
         this.mnemonic = mnemonic;
         this.seed = mnemonicToSeedSync(this.mnemonic);
-        this.root = bip32.fromSeed(this.seed, networks.regtest);
+        this.root = fromSeed(this.seed, networks.regtest);
     }
 
     getMnemonic(): string {
