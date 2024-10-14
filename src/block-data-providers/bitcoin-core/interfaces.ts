@@ -40,10 +40,7 @@ export interface Output {
     };
 }
 
-export interface BitcoinCoreOperationState extends BaseOperationState {
-    currentBlockHeight: number;
-    indexedBlockHeight: number;
-}
+export type BitcoinCoreOperationState = BaseOperationState;
 
 export type Transaction = {
     txid: string;

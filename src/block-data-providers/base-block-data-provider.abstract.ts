@@ -12,7 +12,7 @@ import { ConfigService } from '@nestjs/config';
 
 export interface BaseOperationState {
     indexedBlockHeight: number;
-    blockCache: Record<number, string>;
+    indexedBlockHash: string;
 }
 
 export abstract class BaseBlockDataProvider<
@@ -20,9 +20,10 @@ export abstract class BaseBlockDataProvider<
 > implements OnModuleInit
 {
     protected abstract readonly logger: Logger;
-    protected abstract readonly operationStateKey: string;
-    protected readonly cacheSize = 6;
     protected readonly cronJobName = 'providerSync';
+    protected readonly schedulerInterval = '*/10 * * * * *';
+    protected emptyHash =
+        '0000000000000000000000000000000000000000000000000000000000000000';
 
     protected constructor(
         protected readonly configService: ConfigService,
@@ -39,11 +40,7 @@ export abstract class BaseBlockDataProvider<
     abstract sync(): void;
 
     private initiateCronJob() {
-        const schedulerInterval = this.configService.get<string>(
-            'app.schedulerInterval',
-        );
-
-        const job = new CronJob(schedulerInterval, () => this.sync());
+        const job = new CronJob(this.schedulerInterval, () => this.sync());
 
         this.schedulerRegistry.addCronJob(this.cronJobName, job);
         job.start();
@@ -66,69 +63,42 @@ export abstract class BaseBlockDataProvider<
     }
 
     async getState(): Promise<OperationState> {
-        return (
-            await this.operationStateService.getOperationState(
-                this.operationStateKey,
-            )
-        )?.state;
+        const state =
+            await this.operationStateService.getCurrentOperationState();
+        return state as unknown as Promise<OperationState>;
     }
 
-    async setState(
-        currentState: OperationState,
-        partialState: Partial<OperationState>,
-    ): Promise<void> {
-        if (partialState.blockCache) {
-            const updatedBlockCache = {
-                ...currentState.blockCache,
-                ...partialState.blockCache,
-            };
-
-            if (this.cacheSize < Object.keys(updatedBlockCache).length) {
-                delete updatedBlockCache[currentState.indexedBlockHeight - 5];
-            }
-
-            partialState.blockCache = updatedBlockCache;
-        }
-
-        const newState = {
-            ...currentState,
-            ...partialState,
-        };
-
-        await this.operationStateService.setOperationState(
-            this.operationStateKey,
-            newState,
-        );
+    async setState(futureState: Partial<OperationState>): Promise<void> {
+        await this.operationStateService.setOperationState(futureState);
     }
 
     abstract getBlockHash(height: number): Promise<string>;
 
     async traceReorg(): Promise<number> {
-        const { indexedBlockHeight, blockCache } = await this.getState();
-        let counter = indexedBlockHeight;
+        let state = await this.operationStateService.getCurrentOperationState();
 
-        if (Object.keys(blockCache).length === 0) {
-            return indexedBlockHeight;
+        if (state.indexedBlockHash === this.emptyHash) {
+            return state.indexedBlockHeight;
         }
 
         while (true) {
-            const storedBlockHash = blockCache[counter];
-
-            if (storedBlockHash === undefined) {
+            if (state === null) {
                 throw new Error('Reorgs levels deep');
             }
 
-            const fetchedBlockHash = await this.getBlockHash(counter);
+            const fetchedBlockHash = await this.getBlockHash(
+                state.indexedBlockHeight,
+            );
 
-            if (storedBlockHash === fetchedBlockHash) {
-                return counter;
+            if (state.indexedBlockHash === fetchedBlockHash) {
+                return state.indexedBlockHeight;
             }
 
             await this.transactionService.deleteTransactionByBlockHash(
-                storedBlockHash,
+                state.indexedBlockHash,
             );
 
-            --counter;
+            state = await this.operationStateService.dequeue_operation_state();
         }
     }
 }

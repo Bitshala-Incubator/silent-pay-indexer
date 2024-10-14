@@ -1,10 +1,16 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
+import configuration from '@/configuration';
 
-@Entity()
+const operationTableName = `${configuration()['providerType']}_operation_state`;
+
+@Entity(operationTableName)
 export class OperationState {
-    @PrimaryColumn('text')
-    id: string;
+    @PrimaryColumn('integer')
+    indexedBlockHeight: number;
 
-    @Column('simple-json')
-    state: any;
+    @Column('text')
+    indexedBlockHash: string;
+
+    @Column({ type: 'simple-json', nullable: true })
+    providerState: unknown;
 }

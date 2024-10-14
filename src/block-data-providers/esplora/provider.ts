@@ -74,16 +74,18 @@ export class EsploraProvider
         } else {
             this.logger.log('No previous state found. Starting from scratch.');
             const updatedState: EsploraOperationState = {
-                currentBlockHeight: 0,
-                blockCache: {},
+                providerState: {
+                    currentBlockHeight: 0,
+                    lastProcessedTxIndex: 0,
+                },
+                indexedBlockHash: this.emptyHash,
                 indexedBlockHeight:
                     this.configService.get<BitcoinNetwork>('app.network') ===
                     BitcoinNetwork.MAINNET
                         ? TAPROOT_ACTIVATION_HEIGHT - 1
                         : 0,
-                lastProcessedTxIndex: 0, // we dont take coinbase txn in account
             };
-            await this.setState(currentState, updatedState);
+            await this.setState(updatedState);
         }
     }
 
@@ -126,7 +128,7 @@ export class EsploraProvider
         const txids = await this.getTxidsForBlock(hash);
 
         for (
-            let i = state.lastProcessedTxIndex + 1;
+            let i = state.providerState.lastProcessedTxIndex + 1;
             i < txids.length;
             i += this.batchSize
         ) {
@@ -161,10 +163,14 @@ export class EsploraProvider
                     }, this),
                 );
 
-                await this.setState(state, {
+                await this.setState({
                     indexedBlockHeight: height,
-                    lastProcessedTxIndex: i + this.batchSize - 1,
-                    blockCache: { [height]: hash },
+                    indexedBlockHash: hash,
+                    providerState: {
+                        lastProcessedTxIndex: i + this.batchSize - 1,
+                        currentBlockHeight:
+                            state.providerState.currentBlockHeight,
+                    },
                 });
             } catch (error) {
                 this.logger.error(

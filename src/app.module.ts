@@ -21,12 +21,14 @@ import { BlockProviderModule } from '@/block-data-providers/block-provider.modul
         TypeOrmModule.forRootAsync({
             imports: [ConfigModule],
             inject: [ConfigService],
-            useFactory: (configService: ConfigService) => ({
-                type: 'sqlite',
-                database: configService.get<string>('db.path'),
-                synchronize: configService.get<boolean>('db.synchronize'),
-                autoLoadEntities: true,
-            }),
+            useFactory: (configService: ConfigService) => {
+                return {
+                    type: 'sqlite',
+                    database: configService.get<string>('db.path'),
+                    synchronize: configService.get<boolean>('db.synchronize'),
+                    autoLoadEntities: true,
+                };
+            },
         }),
         TransactionsModule,
         SilentBlocksModule,

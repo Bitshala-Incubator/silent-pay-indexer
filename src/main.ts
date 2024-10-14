@@ -13,10 +13,16 @@ async function bootstrap() {
 
     const isVerbose = configService.get<boolean>('app.verbose') ?? false;
 
-    const loggerLevels: LogLevel[] = ['error', 'warn', 'log', 'debug'];
+    const isDebug = configService.get<boolean>('app.debug') ?? false;
+
+    const loggerLevels: LogLevel[] = ['error', 'warn', 'log'];
 
     if (isVerbose) {
         loggerLevels.push('verbose');
+    }
+
+    if (isDebug) {
+        loggerLevels.push('debug');
     }
 
     app.useLogger(loggerLevels);

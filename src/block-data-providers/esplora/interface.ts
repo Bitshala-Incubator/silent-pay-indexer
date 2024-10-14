@@ -1,8 +1,10 @@
 import { BaseOperationState } from '@/block-data-providers/base-block-data-provider.abstract';
 
 export interface EsploraOperationState extends BaseOperationState {
-    currentBlockHeight: number;
-    lastProcessedTxIndex: number;
+    providerState: {
+        currentBlockHeight: number;
+        lastProcessedTxIndex: number;
+    };
 }
 
 type EsploraTransactionInput = {

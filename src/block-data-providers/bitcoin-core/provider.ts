@@ -76,8 +76,7 @@ export class BitcoinCoreProvider
         } else {
             this.logger.log('No previous state found. Starting from scratch.');
             const updatedState: BitcoinCoreOperationState = {
-                currentBlockHeight: 0,
-                blockCache: {},
+                indexedBlockHash: this.emptyHash,
                 indexedBlockHeight:
                     this.configService.get<BitcoinNetwork>('app.network') ===
                     BitcoinNetwork.MAINNET
@@ -85,7 +84,7 @@ export class BitcoinCoreProvider
                         : 0,
             };
 
-            await this.setState(currentState, updatedState);
+            await this.setState(updatedState);
         }
     }
 
@@ -94,6 +93,7 @@ export class BitcoinCoreProvider
         this.isSyncing = true;
 
         const state = await this.getState();
+
         if (!state) {
             throw new Error('State not found');
         }
@@ -132,9 +132,9 @@ export class BitcoinCoreProvider
                     );
                 }
 
-                await this.setState(state, {
+                await this.setState({
                     indexedBlockHeight: height,
-                    blockCache: { [height]: blockHash },
+                    indexedBlockHash: blockHash,
                 });
             }
         } finally {

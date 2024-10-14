@@ -5,6 +5,7 @@ app:
   port: <port>
   schedulerInterval: <cron interval>
   verbose: <boolean>
+  debug: <boolean>
   network: <network>
   requestRetry:
     delay: <number> # delay in Milliseconds
