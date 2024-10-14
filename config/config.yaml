@@ -3,7 +3,6 @@ db:
   synchronize: false
 app:
   port: <port>
-  schedulerInterval: <cron interval>
   verbose: <boolean>
   debug: <boolean>
   network: <network>

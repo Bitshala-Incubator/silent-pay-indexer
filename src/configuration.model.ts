@@ -10,13 +10,11 @@ import {
     IsUrl,
     Max,
     Min,
-    Validate,
     ValidateIf,
     ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { BitcoinNetwork, ProviderType } from '@/common/enum';
-
 
 class DbConfig {
     @IsNotEmpty()
