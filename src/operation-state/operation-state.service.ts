@@ -5,7 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class OperationStateService {
-    private cacheSize = 2016; // Define the maximum queue size
+    private cacheSize = 2016; // Define the maximum cache size
 
     constructor(
         @InjectRepository(OperationState)
@@ -16,7 +16,7 @@ export class OperationStateService {
         const state = (
             await this.operationStateRepository.find({
                 order: {
-                    indexedBlockHeight: 'DESC', // Get the newest item first
+                    indexedBlockHeight: 'DESC',
                 },
                 take: 1,
             })
@@ -36,7 +36,7 @@ export class OperationStateService {
         await this.trimState();
     }
 
-    // Remove and return the oldest item in the queue
+    // Remove and return the oldest item in the state cache
     async dequeue_operation_state(): Promise<OperationState | null> {
         const latest_state = (
             await this.operationStateRepository.find({
@@ -55,12 +55,11 @@ export class OperationStateService {
         return null;
     }
 
-    // Ensure the state size does not exceed the cache size
     private async trimState(): Promise<void> {
         const queueCount = await this.operationStateRepository.count();
 
         if (queueCount > this.cacheSize) {
-            // Delete the oldest entries beyond the buffer size
+            // Delete the oldest entries from the cache
             const old_states = await this.operationStateRepository.find({
                 order: {
                     indexedBlockHeight: 'ASC',
