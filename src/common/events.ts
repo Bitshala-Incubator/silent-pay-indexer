@@ -1,1 +1,1 @@
-export const INDEXED_BLOCK_EVENT = 'blockIndexed';
+export const INDEXED_BLOCK_EVENT = 'INDEXED_BLOCK_EVENT';

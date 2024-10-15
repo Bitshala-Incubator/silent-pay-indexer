@@ -5,6 +5,7 @@ import { SILENT_PAYMENT_BLOCK_TYPE } from '@/common/constants';
 import { encodeVarInt, varIntSize, delay } from '@/common/common';
 import { SilentBlocksGateway } from '@/silent-blocks/silent-blocks.gateway';
 import { OnEvent } from '@nestjs/event-emitter';
+import { INDEXED_BLOCK_EVENT } from '@/common/events';
 
 @Injectable()
 export class SilentBlocksService {
@@ -15,9 +16,9 @@ export class SilentBlocksService {
         private readonly silentBlocksGateway: SilentBlocksGateway,
     ) {}
 
-    @OnEvent('blockIndexed')
+    @OnEvent(INDEXED_BLOCK_EVENT)
     async handleBlockIndexedEvent(blockHeight: number) {
-        this.logger.log(`New block indexed: ${blockHeight}`);
+        this.logger.debug(`New block indexed: ${blockHeight}`);
         await delay(1000);
         const silentBlock = await this.getSilentBlockByHeight(blockHeight);
         this.silentBlocksGateway.broadcastSilentBlock(silentBlock);
