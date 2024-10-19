@@ -11,8 +11,8 @@ import {
     EsploraTransaction,
 } from '@/block-data-providers/esplora/interface';
 import { TAPROOT_ACTIVATION_HEIGHT } from '@/common/constants';
-import { TransactionsService } from '@/transactions/transactions.service';
-import { SchedulerRegistry } from '@nestjs/schedule';
+import { BlockStateService } from '@/block-state/block-state.service';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class EsploraProvider
@@ -30,15 +30,13 @@ export class EsploraProvider
         configService: ConfigService,
         indexerService: IndexerService,
         operationStateService: OperationStateService,
-        transactionService: TransactionsService,
-        schedulerRegistry: SchedulerRegistry,
+        blockStateService: BlockStateService,
     ) {
         super(
             configService,
             indexerService,
             operationStateService,
-            transactionService,
-            schedulerRegistry,
+            blockStateService,
         );
 
         this.batchSize = this.configService.get<number>('esplora.batchSize');
@@ -73,22 +71,29 @@ export class EsploraProvider
             );
         } else {
             this.logger.log('No previous state found. Starting from scratch.');
-            const updatedState: EsploraOperationState = {
-                providerState: {
+
+            const blockHeight =
+                this.configService.get<BitcoinNetwork>('app.network') ===
+                BitcoinNetwork.MAINNET
+                    ? TAPROOT_ACTIVATION_HEIGHT - 1
+                    : 0;
+            const blockHash = await this.getBlockHash(blockHeight);
+
+            await this.setState(
+                {
                     currentBlockHeight: 0,
-                    lastProcessedTxIndex: 0,
+                    indexedBlockHeight: blockHeight,
+                    lastProcessedTxIndex: 0, // we don't take coinbase txn into account
                 },
-                indexedBlockHash: this.emptyHash,
-                indexedBlockHeight:
-                    this.configService.get<BitcoinNetwork>('app.network') ===
-                    BitcoinNetwork.MAINNET
-                        ? TAPROOT_ACTIVATION_HEIGHT - 1
-                        : 0,
-            };
-            await this.setState(updatedState);
+                {
+                    blockHash,
+                    blockHeight,
+                },
+            );
         }
     }
 
+    @Cron(CronExpression.EVERY_10_SECONDS)
     async sync() {
         if (this.isSyncing) return;
         this.isSyncing = true;
@@ -108,7 +113,8 @@ export class EsploraProvider
                 return;
             }
 
-            let height = (await this.traceReorg()) + 1;
+            let height =
+                ((await this.traceReorg()) ?? state.indexedBlockHeight) + 1;
 
             for (height; height <= tipHeight; height++) {
                 const blockHash = await this.getBlockHash(height);
@@ -128,7 +134,7 @@ export class EsploraProvider
         const txids = await this.getTxidsForBlock(hash);
 
         for (
-            let i = state.providerState.lastProcessedTxIndex + 1;
+            let i = state.lastProcessedTxIndex + 1;
             i < txids.length;
             i += this.batchSize
         ) {
@@ -163,14 +169,11 @@ export class EsploraProvider
                     }, this),
                 );
 
-                await this.setState({
-                    indexedBlockHeight: height,
-                    indexedBlockHash: hash,
-                    providerState: {
-                        lastProcessedTxIndex: i + this.batchSize - 1,
-                        currentBlockHeight:
-                            state.providerState.currentBlockHeight,
-                    },
+                state.indexedBlockHeight = height;
+                state.lastProcessedTxIndex = i + this.batchSize - 1;
+                await this.setState(state, {
+                    blockHeight: height,
+                    blockHash: hash,
                 });
             } catch (error) {
                 this.logger.error(

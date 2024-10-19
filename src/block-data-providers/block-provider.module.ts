@@ -7,16 +7,15 @@ import { IndexerService } from '@/indexer/indexer.service';
 import { ProviderType } from '@/common/enum';
 import { BitcoinCoreProvider } from '@/block-data-providers/bitcoin-core/provider';
 import { EsploraProvider } from '@/block-data-providers/esplora/provider';
-import { TransactionsService } from '@/transactions/transactions.service';
-import { TransactionsModule } from '@/transactions/transactions.module';
-import { SchedulerRegistry } from '@nestjs/schedule';
+import { BlockStateService } from '@/block-state/block-state.service';
+import { BlockStateModule } from '@/block-state/block-state.module';
 
 @Module({
     imports: [
         OperationStateModule,
         IndexerModule,
         ConfigModule,
-        TransactionsModule,
+        BlockStateModule,
     ],
     controllers: [],
     providers: [
@@ -26,15 +25,13 @@ import { SchedulerRegistry } from '@nestjs/schedule';
                 ConfigService,
                 IndexerService,
                 OperationStateService,
-                TransactionsService,
-                SchedulerRegistry,
+                BlockStateService,
             ],
             useFactory: (
                 configService: ConfigService,
                 indexerService: IndexerService,
                 operationStateService: OperationStateService,
-                transactionService: TransactionsService,
-                schedulerRegistry: SchedulerRegistry,
+                blockStateService: BlockStateService,
             ) => {
                 switch (configService.get<ProviderType>('providerType')) {
                     case ProviderType.ESPLORA:
@@ -42,16 +39,14 @@ import { SchedulerRegistry } from '@nestjs/schedule';
                             configService,
                             indexerService,
                             operationStateService,
-                            transactionService,
-                            schedulerRegistry,
+                            blockStateService,
                         );
                     case ProviderType.BITCOIN_CORE_RPC:
                         return new BitcoinCoreProvider(
                             configService,
                             indexerService,
                             operationStateService,
-                            transactionService,
-                            schedulerRegistry,
+                            blockStateService,
                         );
                     default:
                         throw Error('unrecognised provider type in config');

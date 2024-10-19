@@ -3,7 +3,7 @@ db:
   synchronize: true
 app:
   port: 3000
-  verbose: true
+  verbose: false
   debug: true
   network: regtest
   requestRetry:
@@ -19,4 +19,3 @@ bitcoinCore:
   rpcPass: password
   rpcUser: admin
   rpcPort: 18443
-    

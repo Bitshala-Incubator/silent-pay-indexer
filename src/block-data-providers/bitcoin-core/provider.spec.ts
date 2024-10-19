@@ -12,8 +12,7 @@ import {
     rawTransactions,
 } from '@/block-data-providers/bitcoin-core/provider-fixtures';
 import { Test, TestingModule } from '@nestjs/testing';
-import { TransactionsService } from '@/transactions/transactions.service';
-import { SchedulerRegistry } from '@nestjs/schedule';
+import { BlockStateService } from '@/block-state/block-state.service';
 
 describe('Bitcoin Core Provider', () => {
     let provider: BitcoinCoreProvider;
@@ -49,11 +48,7 @@ describe('Bitcoin Core Provider', () => {
                     },
                 },
                 {
-                    provide: TransactionsService,
-                    useClass: jest.fn(),
-                },
-                {
-                    provide: SchedulerRegistry,
+                    provide: BlockStateService,
                     useClass: jest.fn(),
                 },
             ],

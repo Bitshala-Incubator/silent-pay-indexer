@@ -1,50 +1,24 @@
 import { OperationStateService } from '@/operation-state/operation-state.service';
-import { Logger, OnModuleInit } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import {
     IndexerService,
     TransactionInput,
     TransactionOutput,
 } from '@/indexer/indexer.service';
-import { TransactionsService } from '@/transactions/transactions.service';
-import { SchedulerRegistry } from '@nestjs/schedule';
-import { CronJob } from 'cron';
 import { ConfigService } from '@nestjs/config';
+import { BlockStateService } from '@/block-state/block-state.service';
+import { BlockState } from '@/block-state/block-state.entity';
 
-export interface BaseOperationState {
-    indexedBlockHeight: number;
-    indexedBlockHash: string;
-}
-
-export abstract class BaseBlockDataProvider<
-    OperationState extends BaseOperationState,
-> implements OnModuleInit
-{
+export abstract class BaseBlockDataProvider<OperationState> {
     protected abstract readonly logger: Logger;
-    protected readonly cronJobName = 'providerSync';
-    protected readonly schedulerInterval = '*/10 * * * * *';
-    protected emptyHash =
-        '0000000000000000000000000000000000000000000000000000000000000000';
+    protected abstract readonly operationStateKey: string;
 
     protected constructor(
         protected readonly configService: ConfigService,
         private readonly indexerService: IndexerService,
         private readonly operationStateService: OperationStateService,
-        private readonly transactionService: TransactionsService,
-        private readonly schedulerRegistry: SchedulerRegistry,
+        protected readonly blockStateService: BlockStateService,
     ) {}
-
-    onModuleInit() {
-        this.initiateCronJob();
-    }
-
-    abstract sync(): void;
-
-    private initiateCronJob() {
-        const job = new CronJob(this.schedulerInterval, () => this.sync());
-
-        this.schedulerRegistry.addCronJob(this.cronJobName, job);
-        job.start();
-    }
 
     async indexTransaction(
         txid: string,
@@ -63,42 +37,43 @@ export abstract class BaseBlockDataProvider<
     }
 
     async getState(): Promise<OperationState> {
-        const state =
-            await this.operationStateService.getCurrentOperationState();
-        return state as unknown as Promise<OperationState>;
+        return (
+            await this.operationStateService.getOperationState(
+                this.operationStateKey,
+            )
+        )?.state;
     }
 
-    async setState(futureState: Partial<OperationState>): Promise<void> {
-        await this.operationStateService.setOperationState(futureState);
+    async setState(
+        state: OperationState,
+        blockState: BlockState,
+    ): Promise<void> {
+        await this.operationStateService.setOperationState(
+            this.operationStateKey,
+            state,
+        );
+
+        await this.blockStateService.addBlockState(blockState);
     }
 
     abstract getBlockHash(height: number): Promise<string>;
 
     async traceReorg(): Promise<number> {
-        let state = await this.operationStateService.getCurrentOperationState();
+        let state = await this.blockStateService.getCurrentBlockState();
 
-        if (state.indexedBlockHash === this.emptyHash) {
-            return state.indexedBlockHeight;
+        if (!state) return null;
+
+        while (state) {
+            const fetchedBlockHash = await this.getBlockHash(state.blockHeight);
+
+            if (state.blockHash === fetchedBlockHash) return state.blockHeight;
+
+            this.logger.log(
+                `Reorg found at height: ${state.blockHeight}, Wrong hash: ${state.blockHash}, Correct hash: ${fetchedBlockHash}`,
+            );
+            state = await this.blockStateService.dequeueState();
         }
 
-        while (true) {
-            if (state === null) {
-                throw new Error('Reorgs levels deep');
-            }
-
-            const fetchedBlockHash = await this.getBlockHash(
-                state.indexedBlockHeight,
-            );
-
-            if (state.indexedBlockHash === fetchedBlockHash) {
-                return state.indexedBlockHeight;
-            }
-
-            await this.transactionService.deleteTransactionByBlockHash(
-                state.indexedBlockHash,
-            );
-
-            state = await this.operationStateService.dequeue_operation_state();
-        }
+        throw new Error('Cannot Reorgs, blockchain state exhausted');
     }
 }

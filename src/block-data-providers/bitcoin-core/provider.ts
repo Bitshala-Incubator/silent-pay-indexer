@@ -7,7 +7,7 @@ import {
     SATS_PER_BTC,
     TAPROOT_ACTIVATION_HEIGHT,
 } from '@/common/constants';
-import { SchedulerRegistry } from '@nestjs/schedule';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import {
     IndexerService,
     TransactionInput,
@@ -28,7 +28,7 @@ import {
 import { AxiosRequestConfig } from 'axios';
 import * as currency from 'currency.js';
 import { AxiosRetryConfig, makeRequest } from '@/common/request';
-import { TransactionsService } from '@/transactions/transactions.service';
+import { BlockStateService } from '@/block-state/block-state.service';
 
 @Injectable()
 export class BitcoinCoreProvider
@@ -45,15 +45,13 @@ export class BitcoinCoreProvider
         configService: ConfigService,
         indexerService: IndexerService,
         operationStateService: OperationStateService,
-        transactionService: TransactionsService,
-        schedulerRegistry: SchedulerRegistry,
+        blockStateService: BlockStateService,
     ) {
         super(
             configService,
             indexerService,
             operationStateService,
-            transactionService,
-            schedulerRegistry,
+            blockStateService,
         );
 
         const { protocol, rpcPort, rpcHost } =
@@ -75,19 +73,27 @@ export class BitcoinCoreProvider
             );
         } else {
             this.logger.log('No previous state found. Starting from scratch.');
-            const updatedState: BitcoinCoreOperationState = {
-                indexedBlockHash: this.emptyHash,
-                indexedBlockHeight:
-                    this.configService.get<BitcoinNetwork>('app.network') ===
-                    BitcoinNetwork.MAINNET
-                        ? TAPROOT_ACTIVATION_HEIGHT - 1
-                        : 0,
-            };
 
-            await this.setState(updatedState);
+            const blockHeight =
+                this.configService.get<BitcoinNetwork>('app.network') ===
+                BitcoinNetwork.MAINNET
+                    ? TAPROOT_ACTIVATION_HEIGHT - 1
+                    : 0;
+            const blockHash = await this.getBlockHash(blockHeight);
+
+            await this.setState(
+                {
+                    indexedBlockHeight: blockHeight,
+                },
+                {
+                    blockHash,
+                    blockHeight,
+                },
+            );
         }
     }
 
+    @Cron(CronExpression.EVERY_10_SECONDS)
     async sync() {
         if (this.isSyncing) return;
         this.isSyncing = true;
@@ -112,7 +118,8 @@ export class BitcoinCoreProvider
             const networkInfo = await this.getNetworkInfo();
             const verbosityLevel = this.versionToVerbosity(networkInfo.version);
 
-            let height = (await this.traceReorg()) + 1;
+            let height =
+                ((await this.traceReorg()) ?? state.indexedBlockHeight) + 1;
 
             for (height; height <= tipHeight; height++) {
                 const [transactions, blockHash] = await this.processBlock(
@@ -132,9 +139,10 @@ export class BitcoinCoreProvider
                     );
                 }
 
-                await this.setState({
-                    indexedBlockHeight: height,
-                    indexedBlockHash: blockHash,
+                state.indexedBlockHeight = height;
+                await this.setState(state, {
+                    blockHash: blockHash,
+                    blockHeight: height,
                 });
             }
         } finally {
