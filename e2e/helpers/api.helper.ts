@@ -13,12 +13,12 @@ export class ApiHelper {
         this.baseUrl = `http://localhost:${config.app.port}`;
     }
 
-    async get<TResponseData = any>(path: string, params?: any) {
+    async get<TResponseData = any>(path: string, params?: AxiosRequestConfig) {
         return this.makeRequest<TResponseData>({
             method: 'get',
             url: `${this.baseUrl}${path}`,
-            params,
             validateStatus: () => true,
+            ...params,
         });
     }
 
