@@ -1,14 +1,17 @@
 import { Payment, Transaction } from 'bitcoinjs-lib';
 import { IndexerService } from '@/indexer/indexer.service';
+import {
+    Transaction as EntityTransaction,
+    TransactionOutput,
+} from '@/transactions/transaction.entity';
 import { SATS_PER_BTC } from '@/common/constants';
 import * as currency from 'currency.js';
-import { varIntSize } from '@/common/common';
 
 export function generateScanTweak(
     transaction: Transaction,
     outputs: Payment[],
     indexerService: IndexerService,
-): string {
+): [string, TransactionOutput[]] {
     const txins = transaction.ins.map((input, index) => {
         const isWitness = transaction.hasWitnesses();
 
@@ -27,9 +30,30 @@ export function generateScanTweak(
         value: output.value,
     }));
 
-    const [scanTweak] = indexerService.computeScanTweak(txins, txouts);
+    const [scanTweak, outputEntity] = indexerService.computeScanTweak(
+        txins,
+        txouts,
+    );
 
-    return scanTweak.toString('hex');
+    return [scanTweak.toString('hex'), outputEntity];
+}
+
+export function transformTransaction(
+    transaction: Transaction,
+    txid: string,
+    blockHash: string,
+    blockHeight: number,
+    outputs: Payment[],
+    indexerService: IndexerService,
+): EntityTransaction {
+    const entityTransaction = new EntityTransaction();
+    entityTransaction.blockHash = blockHash;
+    entityTransaction.blockHeight = blockHeight;
+    entityTransaction.isSpent = false;
+    [entityTransaction.scanTweak, entityTransaction.outputs] =
+        generateScanTweak(transaction, outputs, indexerService);
+    entityTransaction.id = txid;
+    return entityTransaction;
 }
 
 export const readVarInt = (data: Buffer, cursor: number): number => {
@@ -49,49 +73,6 @@ export interface SilentBlockTransaction {
     }[];
     scanTweak: string;
 }
-
-export interface SilentBlock {
-    type: number;
-    transactions: SilentBlockTransaction[];
-}
-
-export const parseSilentBlock = (data: Buffer): SilentBlock => {
-    const type = data.readUInt8(0);
-    const transactions: SilentBlockTransaction[] = [];
-
-    let cursor = 1;
-    const count = readVarInt(data, cursor);
-    cursor += varIntSize(count);
-
-    for (let i = 0; i < count; i++) {
-        const txid = data.subarray(cursor, cursor + 32).toString('hex');
-        cursor += 32;
-
-        const outputs = [];
-        const outputCount = readVarInt(data, cursor);
-        cursor += varIntSize(outputCount);
-
-        for (let j = 0; j < outputCount; j++) {
-            const value = Number(data.readBigUInt64BE(cursor));
-            cursor += 8;
-
-            const pubkey = data.subarray(cursor, cursor + 32).toString('hex');
-            cursor += 32;
-
-            const vout = data.readUint32BE(cursor);
-            cursor += 4;
-
-            outputs.push({ value, pubkey, vout });
-        }
-
-        const scanTweak = data.subarray(cursor, cursor + 33).toString('hex');
-        cursor += 33;
-
-        transactions.push({ txid, outputs, scanTweak });
-    }
-
-    return { type, transactions };
-};
 
 export const btcToSats = (amount: number): number => {
     return currency(amount, { precision: 8 }).multiply(SATS_PER_BTC).value;

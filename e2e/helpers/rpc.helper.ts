@@ -60,6 +60,15 @@ export class BitcoinRPCUtil {
         });
     }
 
+    loadWallet(walletName: string): Promise<any> {
+        return this.request({
+            data: {
+                method: 'createwallet',
+                params: [walletName],
+            },
+        });
+    }
+
     getNewAddress(): Promise<string> {
         return this.request({
             data: {

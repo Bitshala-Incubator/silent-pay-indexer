@@ -11,6 +11,8 @@ import {
 import { btcToSats } from '@e2e/helpers/common.helper';
 import { randomBytes } from 'crypto';
 import { toXOnly } from 'bitcoinjs-lib/src/psbt/bip371';
+import { BitcoinRPCUtil } from '@e2e/helpers/rpc.helper';
+import { assert } from 'console';
 
 initEccLib(ecc);
 
@@ -23,9 +25,73 @@ export type UTXO = {
 
 export class WalletHelper {
     private root: BIP32Interface;
-
+    private bitcoinRPCUtil;
+    private spendable_amount = 0;
+    private last_block = 209_999;
+    private spendable_address: string;
+    public current_block_count = 0;
     constructor() {
         this.root = fromSeed(randomBytes(64), networks.regtest);
+        this.bitcoinRPCUtil = new BitcoinRPCUtil();
+    }
+
+    // generates 50 bitcoin
+    async initilise_spendable_amount() {
+        await this.bitcoinRPCUtil.createWallet('test_wallet');
+        await this.bitcoinRPCUtil.loadWallet('test_wallet');
+        this.spendable_address = await this.bitcoinRPCUtil.getNewAddress();
+        await this.bitcoinRPCUtil.mineToAddress(101, this.spendable_address);
+        this.spendable_amount += 50;
+        this.current_block_count += 101;
+    }
+
+    async ensure_amount_available(amount: number) {
+        assert(
+            this.current_block_count < this.last_block,
+            'reward cant be less than 50',
+        );
+        if (this.spendable_amount - amount < 0) {
+            this.mineblock();
+            return this.ensure_amount_available(amount);
+        }
+    }
+
+    async mineblock(): Promise<string> {
+        const blockhash = (
+            await this.bitcoinRPCUtil.mineToAddress(1, this.spendable_address)
+        )[0];
+        this.spendable_amount += 50;
+        this.current_block_count += 1;
+        return blockhash;
+    }
+
+    async addAmountToAddress(payment: Payment, amount): Promise<UTXO> {
+        this.ensure_amount_available(amount);
+
+        const txid = await this.bitcoinRPCUtil.sendToAddress(
+            payment.address,
+            amount,
+        );
+
+        await this.mineblock();
+
+        for (let vout = 0; vout < 2; vout++) {
+            const utxo = await this.bitcoinRPCUtil.getTxOut(txid, vout);
+            if (
+                utxo &&
+                utxo.scriptPubKey &&
+                utxo.scriptPubKey.address === payment.address
+            ) {
+                return {
+                    txid,
+                    vout: vout,
+                    value: btcToSats(utxo.value),
+                    rawTx: await this.bitcoinRPCUtil.getRawTransaction(txid),
+                };
+            }
+        }
+
+        throw new Error('cant find transaction');
     }
 
     generateAddresses(count: number, type: 'p2wpkh' | 'p2tr'): Payment[] {
@@ -57,14 +123,12 @@ export class WalletHelper {
         return outputs;
     }
 
-    /**
-     * Craft and sign a transaction sending 5.999 BTC to the provided Taproot address.
-     *
-     * @param utxos - Array of UTXOs to spend from.
-     * @param taprootOutput - The Taproot output to send to.
-     * @returns {Transaction} The raw signed transaction.
-     */
-    craftTransaction(utxos: UTXO[], taprootOutput: Payment): Transaction {
+    async craftAndSpendTransaction(
+        utxos: UTXO[],
+        taprootOutput: Payment,
+        outputValue: number,
+        fee: number,
+    ): Promise<[Transaction, string, string]> {
         const psbt = new Psbt({ network: networks.regtest });
 
         utxos.forEach((utxo) => {
@@ -75,33 +139,36 @@ export class WalletHelper {
             });
         });
 
-        // Add the output to the Taproot address (6 BTC)
         const totalInputValue = utxos.reduce(
             (acc, utxo) => acc + utxo.value,
             0,
         );
 
-        const outputValue = btcToSats(5.999);
-        const fee = btcToSats(0.001);
-
-        if (totalInputValue < outputValue + fee) {
+        if (totalInputValue < btcToSats(outputValue) + btcToSats(fee)) {
             throw new Error('Insufficient funds');
         }
 
         psbt.addOutput({
             address: taprootOutput.address,
             tapInternalKey: taprootOutput.internalPubkey,
-            value: outputValue,
+            value: btcToSats(outputValue),
         });
 
         // Sign the inputs with the corresponding private keys
-        utxos.forEach((utxo, index) => {
+        utxos.forEach((_, index) => {
             const keyPair = this.root.derivePath(`m/84'/0'/0'/0/${index}`);
             psbt.signInput(index, keyPair);
         });
 
         psbt.finalizeAllInputs();
 
-        return psbt.extractTransaction(true);
+        const transaction = psbt.extractTransaction(true);
+
+        const txid = await this.bitcoinRPCUtil.sendRawTransaction(
+            transaction.toHex(),
+        );
+        const blockHash = await this.mineblock();
+
+        return [transaction, txid, blockHash];
     }
 }
