@@ -6,13 +6,13 @@ import { Config } from '@/configuration.model';
 import { validateSync } from 'class-validator';
 import { plainToClass } from 'class-transformer';
 
-const getConfigFilePath = () => {
+const getConfigFilePath = (): string => {
     switch (process.env.NODE_ENV) {
         case 'dev':
         case 'test':
             return join(__dirname, 'config', 'dev.config.yaml');
         case 'e2e':
-            return join(__dirname, 'config', 'e2e.config.yaml');
+            return join(__dirname, '..', 'config', 'e2e.config.yaml');
         default:
             return join(__dirname, 'config', 'config.yaml');
     }
