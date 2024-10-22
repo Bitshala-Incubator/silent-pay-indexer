@@ -5,6 +5,7 @@ import {
     IsIn,
     IsInt,
     IsNotEmpty,
+    IsOptional,
     IsString,
     IsUrl,
     Max,
@@ -47,6 +48,14 @@ class AppConfig {
     @ValidateNested()
     @Type(() => AxiosRetryConfig)
     requestRetry: AxiosRetryConfig;
+
+    @IsOptional()
+    @IsBoolean()
+    verbose?: boolean;
+
+    @IsOptional()
+    @IsBoolean()
+    debug?: boolean;
 }
 
 class EsploraConfig {

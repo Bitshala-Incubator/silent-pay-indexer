@@ -3,6 +3,8 @@ db:
   synchronize: false
 app:
   port: <port>
+  verbose: <boolean>
+  debug: <boolean>
   network: <network>
   requestRetry:
     delay: <number> # delay in Milliseconds

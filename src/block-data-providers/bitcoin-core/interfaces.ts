@@ -40,7 +40,6 @@ export interface Output {
 }
 
 export type BitcoinCoreOperationState = {
-    currentBlockHeight: number;
     indexedBlockHeight: number;
 };
 

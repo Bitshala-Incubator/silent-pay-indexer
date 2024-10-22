@@ -11,6 +11,7 @@ import {
     EsploraTransaction,
 } from '@/block-data-providers/esplora/interface';
 import { TAPROOT_ACTIVATION_HEIGHT } from '@/common/constants';
+import { BlockStateService } from '@/block-state/block-state.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
@@ -26,11 +27,17 @@ export class EsploraProvider
     private readonly batchSize: number;
 
     constructor(
-        private readonly configService: ConfigService,
+        configService: ConfigService,
         indexerService: IndexerService,
         operationStateService: OperationStateService,
+        blockStateService: BlockStateService,
     ) {
-        super(indexerService, operationStateService);
+        super(
+            configService,
+            indexerService,
+            operationStateService,
+            blockStateService,
+        );
 
         this.batchSize = this.configService.get<number>('esplora.batchSize');
 
@@ -55,25 +62,34 @@ export class EsploraProvider
     }
 
     async onApplicationBootstrap() {
-        const getState = await this.getState();
-        if (getState) {
+        const currentState = await this.getState();
+        if (currentState) {
             this.logger.log(
                 `Restoring state from previous run: ${JSON.stringify(
-                    getState,
+                    currentState,
                 )}`,
             );
         } else {
             this.logger.log('No previous state found. Starting from scratch.');
-            const state: EsploraOperationState = {
-                currentBlockHeight: 0,
-                indexedBlockHeight:
-                    this.configService.get<BitcoinNetwork>('app.network') ===
-                    BitcoinNetwork.MAINNET
-                        ? TAPROOT_ACTIVATION_HEIGHT - 1
-                        : 0,
-                lastProcessedTxIndex: 0, // we dont take coinbase txn in account
-            };
-            await this.setState(state);
+
+            const blockHeight =
+                this.configService.get<BitcoinNetwork>('app.network') ===
+                BitcoinNetwork.MAINNET
+                    ? TAPROOT_ACTIVATION_HEIGHT - 1
+                    : 0;
+            const blockHash = await this.getBlockHash(blockHeight);
+
+            await this.setState(
+                {
+                    currentBlockHeight: 0,
+                    indexedBlockHeight: blockHeight,
+                    lastProcessedTxIndex: 0, // we don't take coinbase txn into account
+                },
+                {
+                    blockHash,
+                    blockHeight,
+                },
+            );
         }
     }
 
@@ -97,11 +113,10 @@ export class EsploraProvider
                 return;
             }
 
-            for (
-                let height = state.indexedBlockHeight;
-                height <= tipHeight;
-                height++
-            ) {
+            let height =
+                ((await this.traceReorg()) ?? state.indexedBlockHeight) + 1;
+
+            for (height; height <= tipHeight; height++) {
                 const blockHash = await this.getBlockHash(height);
                 this.logger.log(
                     `Processing block at height ${height}, hash ${blockHash}`,
@@ -156,7 +171,10 @@ export class EsploraProvider
 
                 state.indexedBlockHeight = height;
                 state.lastProcessedTxIndex = i + this.batchSize - 1;
-                await this.setState(state);
+                await this.setState(state, {
+                    blockHeight: height,
+                    blockHash: hash,
+                });
             } catch (error) {
                 this.logger.error(
                     `Error processing transactions in block at height ${height}, hash ${hash}: ${error.message}`,
@@ -189,7 +207,7 @@ export class EsploraProvider
         );
     }
 
-    private async getBlockHash(height: number): Promise<string> {
+    async getBlockHash(height: number): Promise<string> {
         return makeRequest(
             {
                 method: 'GET',

@@ -27,7 +27,7 @@ export const makeRequest = async (
         try {
             const response = await axios.request(requestConfig);
 
-            logger.debug(
+            logger.verbose(
                 `Request to Provider succeeded:\nRequest:\n${JSON.stringify(
                     requestConfig,
                     null,

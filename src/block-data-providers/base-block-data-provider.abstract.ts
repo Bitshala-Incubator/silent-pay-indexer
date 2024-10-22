@@ -5,14 +5,19 @@ import {
     TransactionInput,
     TransactionOutput,
 } from '@/indexer/indexer.service';
+import { ConfigService } from '@nestjs/config';
+import { BlockStateService } from '@/block-state/block-state.service';
+import { BlockState } from '@/block-state/block-state.entity';
 
 export abstract class BaseBlockDataProvider<OperationState> {
     protected abstract readonly logger: Logger;
     protected abstract readonly operationStateKey: string;
 
     protected constructor(
+        protected readonly configService: ConfigService,
         private readonly indexerService: IndexerService,
         private readonly operationStateService: OperationStateService,
+        protected readonly blockStateService: BlockStateService,
     ) {}
 
     async indexTransaction(
@@ -39,10 +44,36 @@ export abstract class BaseBlockDataProvider<OperationState> {
         )?.state;
     }
 
-    async setState(state: OperationState): Promise<void> {
+    async setState(
+        state: OperationState,
+        blockState: BlockState,
+    ): Promise<void> {
         await this.operationStateService.setOperationState(
             this.operationStateKey,
             state,
         );
+
+        await this.blockStateService.addBlockState(blockState);
+    }
+
+    abstract getBlockHash(height: number): Promise<string>;
+
+    async traceReorg(): Promise<number> {
+        let state = await this.blockStateService.getCurrentBlockState();
+
+        if (!state) return null;
+
+        while (state) {
+            const fetchedBlockHash = await this.getBlockHash(state.blockHeight);
+
+            if (state.blockHash === fetchedBlockHash) return state.blockHeight;
+
+            this.logger.log(
+                `Reorg found at height: ${state.blockHeight}, Wrong hash: ${state.blockHash}, Correct hash: ${fetchedBlockHash}`,
+            );
+            state = await this.blockStateService.dequeueState();
+        }
+
+        throw new Error('Cannot Reorgs, blockchain state exhausted');
     }
 }

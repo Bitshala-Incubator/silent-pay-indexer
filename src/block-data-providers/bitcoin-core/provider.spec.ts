@@ -12,6 +12,7 @@ import {
     rawTransactions,
 } from '@/block-data-providers/bitcoin-core/provider-fixtures';
 import { Test, TestingModule } from '@nestjs/testing';
+import { BlockStateService } from '@/block-state/block-state.service';
 
 describe('Bitcoin Core Provider', () => {
     let provider: BitcoinCoreProvider;
@@ -46,6 +47,10 @@ describe('Bitcoin Core Provider', () => {
                         getOperationState: jest.fn(),
                     },
                 },
+                {
+                    provide: BlockStateService,
+                    useClass: jest.fn(),
+                },
             ],
         }).compile();
 
@@ -72,8 +77,8 @@ describe('Bitcoin Core Provider', () => {
 
     it('should process each transaction of a block appropriately', async () => {
         const result = await provider.processBlock(3, 2);
-        expect(result).toHaveLength(1);
-        expect(result).toEqual(
+        expect(result[0]).toHaveLength(1);
+        expect(result[0]).toEqual(
             expect.arrayContaining([...parsedTransactions.values()]),
         );
     });
