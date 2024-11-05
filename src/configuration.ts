@@ -25,7 +25,7 @@ export function mergeEnvVariablesRecursive(
     for (const key of Object.keys(config)) {
         const currentEnvVarName = envVarName
             ? `${envVarName}_${camelToSnakeCase(key)}`
-            : key.toUpperCase();
+            : camelToSnakeCase(key);
         const currentEnvVarValue = process.env[currentEnvVarName];
         if (config[key] && typeof config[key] === 'object') {
             mergeEnvVariablesRecursive(config[key], currentEnvVarName);

@@ -41,3 +41,4 @@ lerna-debug.log*
 
 #dev
 /config/dev.config.yaml
+/config/e2e.config.yaml
