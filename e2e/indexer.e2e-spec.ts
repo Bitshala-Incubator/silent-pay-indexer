@@ -26,45 +26,63 @@ describe('Indexer', () => {
         await shutdownDep();
     });
 
-    it('p2wpkh - should ensure that the correct silent block is fetched', async () => {
-        const taprootOutput = walletHelper.generateAddresses(1, 'p2tr')[0];
-        const p2wkhOutputs = walletHelper.generateAddresses(6, 'p2wpkh');
-        const utxos: UTXO[] = [];
+    function testAddressType(
+        type: 'p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh',
+        description: string,
+    ) {
+        it(description, async () => {
+            const taprootOutput = walletHelper.generateAddresses(1, 'p2tr')[0];
+            const outputs = walletHelper.generateAddresses(6, type);
+            const utxos: UTXO[] = [];
 
-        for (const output of p2wkhOutputs) {
-            const utxo = await walletHelper.addAmountToAddress(output, 1);
-            utxos.push(utxo);
-        }
+            for (const output of outputs) {
+                const utxo = await walletHelper.addAmountToAddress(output, 1);
+                utxos.push(utxo);
+            }
 
-        const [transaction, txid, blockHash] =
-            await walletHelper.craftAndSpendTransaction(
-                utxos,
-                taprootOutput,
-                5.999,
-                0.001,
+            const [transaction, txid, blockHash] =
+                await walletHelper.craftAndSpendTransaction(
+                    utxos,
+                    taprootOutput,
+                    5.999,
+                    0.001,
+                );
+
+            const transformedTransaction = transformTransaction(
+                transaction,
+                txid,
+                blockHash,
+                walletHelper.current_block_count,
+                outputs,
+                indexerService,
             );
 
-        const transformedTransaction = transformTransaction(
-            transaction,
-            txid,
-            blockHash,
-            walletHelper.current_block_count,
-            p2wkhOutputs,
-            indexerService,
-        );
+            const silentBlock = silentBlockService.encodeSilentBlock([
+                transformedTransaction,
+            ]);
 
-        const silentBlock = silentBlockService.encodeSilentBlock([
-            transformedTransaction,
-        ]);
+            await new Promise((resolve) => setTimeout(resolve, 15000));
+            const response = await apiHelper.get(
+                `/silent-block/hash/${blockHash}`,
+                {
+                    responseType: 'arraybuffer',
+                },
+            );
 
-        await new Promise((resolve) => setTimeout(resolve, 15000));
-        const response = await apiHelper.get(
-            `/silent-block/hash/${blockHash}`,
-            {
-                responseType: 'arraybuffer',
-            },
-        );
+            expect(response.data as Buffer).toEqual(silentBlock);
+        });
+    }
 
-        expect(response.data as Buffer).toEqual(silentBlock);
-    });
+    testAddressType(
+        'p2wpkh',
+        'p2wpkh - should ensure that the correct silent block is fetched',
+    );
+    testAddressType(
+        'p2sh-p2wpkh',
+        'p2sh-p2wpkh - should ensure that the correct silent block is fetched',
+    );
+    testAddressType(
+        'p2pkh',
+        'p2pkh - should ensure that the correct silent block is fetched',
+    );
 });

@@ -21,6 +21,7 @@ export type UTXO = {
     vout: number;
     value: number;
     rawTx: string;
+    addressType?: 'p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh' | 'p2tr';
 };
 
 export class WalletHelper {
@@ -94,14 +95,49 @@ export class WalletHelper {
         throw new Error('cant find transaction');
     }
 
-    generateAddresses(count: number, type: 'p2wpkh' | 'p2tr'): Payment[] {
+    generateAddresses(
+        count: number,
+        type: 'p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh' | 'p2tr',
+    ): Payment[] {
         const outputs: Payment[] = [];
         for (let i = 0; i < count; i++) {
-            const path = `m/84'/0'/0'/0/${i}`;
+            let path: string;
+            switch (type) {
+                case 'p2pkh':
+                    path = `m/44'/0'/0'/0/${i}`;
+                    break;
+                case 'p2sh-p2wpkh':
+                    path = `m/49'/0'/0'/0/${i}`;
+                    break;
+                case 'p2wpkh':
+                    path = `m/84'/0'/0'/0/${i}`;
+                    break;
+                case 'p2tr':
+                    path = `m/86'/0'/0'/0/${i}`;
+                    break;
+                default:
+                    throw new Error('Unsupported address type');
+            }
             const child = this.root.derivePath(path);
             let output: Payment;
 
             switch (type) {
+                case 'p2pkh':
+                    output = payments.p2pkh({
+                        pubkey: child.publicKey,
+                        network: networks.regtest,
+                    });
+                    break;
+                case 'p2sh-p2wpkh':
+                    const p2wpkh = payments.p2wpkh({
+                        pubkey: child.publicKey,
+                        network: networks.regtest,
+                    });
+                    output = payments.p2sh({
+                        redeem: p2wpkh,
+                        network: networks.regtest,
+                    });
+                    break;
                 case 'p2wpkh':
                     output = payments.p2wpkh({
                         pubkey: child.publicKey,
@@ -125,18 +161,52 @@ export class WalletHelper {
 
     async craftAndSpendTransaction(
         utxos: UTXO[],
-        taprootOutput: Payment,
+        output: Payment,
         outputValue: number,
         fee: number,
     ): Promise<[Transaction, string, string]> {
         const psbt = new Psbt({ network: networks.regtest });
 
-        utxos.forEach((utxo) => {
-            psbt.addInput({
+        utxos.forEach((utxo, index) => {
+            const input: any = {
                 hash: utxo.txid,
                 index: utxo.vout,
                 nonWitnessUtxo: Buffer.from(utxo.rawTx, 'hex'),
-            });
+            };
+
+            // Assume utxo has an addressType field
+            const addressType = utxo.addressType;
+            let path: string;
+            switch (addressType) {
+                case 'p2pkh':
+                    path = `m/44'/0'/0'/0/${index}`;
+                    break;
+                case 'p2sh-p2wpkh':
+                    path = `m/49'/0'/0'/0/${index}`;
+                    const child = this.root.derivePath(path);
+                    const p2wpkh = payments.p2wpkh({
+                        pubkey: child.publicKey,
+                        network: networks.regtest,
+                    });
+                    input.redeemScript = payments.p2sh({
+                        redeem: p2wpkh,
+                        network: networks.regtest,
+                    }).redeem.output;
+                    break;
+                case 'p2wpkh':
+                    path = `m/84'/0'/0'/0/${index}`;
+                    break;
+                case 'p2tr':
+                    path = `m/86'/0'/0'/0/${index}`;
+                    input.tapInternalKey = toXOnly(
+                        this.root.derivePath(path).publicKey,
+                    );
+                    break;
+                default:
+                    throw new Error('Unsupported address type');
+            }
+
+            psbt.addInput(input);
         });
 
         const totalInputValue = utxos.reduce(
@@ -149,14 +219,29 @@ export class WalletHelper {
         }
 
         psbt.addOutput({
-            address: taprootOutput.address,
-            tapInternalKey: taprootOutput.internalPubkey,
+            address: output.address,
             value: btcToSats(outputValue),
         });
 
-        // Sign the inputs with the corresponding private keys
-        utxos.forEach((_, index) => {
-            const keyPair = this.root.derivePath(`m/84'/0'/0'/0/${index}`);
+        utxos.forEach((utxo, index) => {
+            let path: string;
+            switch (utxo.addressType) {
+                case 'p2pkh':
+                    path = `m/44'/0'/0'/0/${index}`;
+                    break;
+                case 'p2sh-p2wpkh':
+                    path = `m/49'/0'/0'/0/${index}`;
+                    break;
+                case 'p2wpkh':
+                    path = `m/84'/0'/0'/0/${index}`;
+                    break;
+                case 'p2tr':
+                    path = `m/86'/0'/0'/0/${index}`;
+                    break;
+                default:
+                    throw new Error('Unsupported address type');
+            }
+            const keyPair = this.root.derivePath(path);
             psbt.signInput(index, keyPair);
         });
 
