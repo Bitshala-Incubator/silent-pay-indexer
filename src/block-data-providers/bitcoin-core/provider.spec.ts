@@ -13,6 +13,7 @@ import {
 } from '@/block-data-providers/bitcoin-core/provider-fixtures';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BlockStateService } from '@/block-state/block-state.service';
+import { DbTransactionService } from '@/db-transaction/db-transaction.service';
 
 describe('Bitcoin Core Provider', () => {
     let provider: BitcoinCoreProvider;
@@ -50,6 +51,12 @@ describe('Bitcoin Core Provider', () => {
                 {
                     provide: BlockStateService,
                     useClass: jest.fn(),
+                },
+                {
+                    provide: DbTransactionService,
+                    useValue: {
+                        execute: jest.fn(),
+                    },
                 },
             ],
         }).compile();

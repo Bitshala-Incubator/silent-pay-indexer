@@ -17,6 +17,8 @@ const config: Config.InitialOptions = {
         '.*.entity.ts',
         '.*.dto.ts',
         '.*.spec.ts',
+        '.*.mock.ts',
+        '.*.fixture.ts',
         '.*.module-definition.ts',
         '.*.configuration.ts',
         '.*.configuration.model.ts',

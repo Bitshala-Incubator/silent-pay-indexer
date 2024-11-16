@@ -13,11 +13,4 @@ export class OperationStateService {
     async getOperationState(id: string): Promise<OperationState> {
         return this.operationStateRepository.findOneBy({ id: id });
     }
-
-    async setOperationState(id: string, state: any): Promise<OperationState> {
-        const operationState = new OperationState();
-        operationState.id = id;
-        operationState.state = state;
-        return this.operationStateRepository.save(operationState);
-    }
 }

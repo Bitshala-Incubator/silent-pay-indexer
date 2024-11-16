@@ -1,4 +1,3 @@
-import { TransactionsService } from '@/transactions/transactions.service';
 import {
     Transaction,
     TransactionOutput as TransactionOutputEntity,
@@ -6,6 +5,7 @@ import {
 import { createTaggedHash, extractPubKeyFromScript } from '@/common/common';
 import { publicKeyCombine, publicKeyTweakMul } from 'secp256k1';
 import { Injectable } from '@nestjs/common';
+import { EntityManager } from 'typeorm';
 
 export type TransactionInput = {
     txid: string; // transaction id
@@ -22,15 +22,14 @@ export type TransactionOutput = {
 
 @Injectable()
 export class IndexerService {
-    constructor(private readonly transactionsService: TransactionsService) {}
-
     async index(
         txid: string,
         vin: TransactionInput[],
         vout: TransactionOutput[],
         blockHeight: number,
         blockHash: string,
-    ) {
+        manager: EntityManager,
+    ): Promise<void> {
         const scanResult = this.computeScanTweak(vin, vout);
         if (scanResult !== null) {
             const [scanTweak, eligibleOutputPubKeys] = scanResult;
@@ -42,7 +41,7 @@ export class IndexerService {
             transaction.outputs = eligibleOutputPubKeys;
             transaction.isSpent = false;
 
-            await this.transactionsService.saveTransaction(transaction);
+            await manager.save(Transaction, transaction);
         }
     }
 

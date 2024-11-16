@@ -29,6 +29,7 @@ import { AxiosRequestConfig } from 'axios';
 import * as currency from 'currency.js';
 import { AxiosRetryConfig, makeRequest } from '@/common/request';
 import { BlockStateService } from '@/block-state/block-state.service';
+import { DbTransactionService } from '@/db-transaction/db-transaction.service';
 
 @Injectable()
 export class BitcoinCoreProvider
@@ -46,6 +47,7 @@ export class BitcoinCoreProvider
         indexerService: IndexerService,
         operationStateService: OperationStateService,
         blockStateService: BlockStateService,
+        private readonly dbTransactionService: DbTransactionService,
     ) {
         super(
             configService,
@@ -81,15 +83,18 @@ export class BitcoinCoreProvider
                     : 0;
             const blockHash = await this.getBlockHash(blockHeight);
 
-            await this.setState(
-                {
-                    indexedBlockHeight: blockHeight,
-                },
-                {
-                    blockHash,
-                    blockHeight,
-                },
-            );
+            await this.dbTransactionService.execute(async (manager) => {
+                await this.setState(
+                    {
+                        indexedBlockHeight: blockHeight,
+                    },
+                    {
+                        blockHash,
+                        blockHeight,
+                    },
+                    manager,
+                );
+            });
         }
     }
 
@@ -127,22 +132,29 @@ export class BitcoinCoreProvider
                     verbosityLevel,
                 );
 
-                for (const transaction of transactions) {
-                    const { txid, vin, vout, blockHeight, blockHash } =
-                        transaction;
-                    await this.indexTransaction(
-                        txid,
-                        vin,
-                        vout,
-                        blockHeight,
-                        blockHash,
-                    );
-                }
+                await this.dbTransactionService.execute(async (manager) => {
+                    for (const transaction of transactions) {
+                        const { txid, vin, vout, blockHeight, blockHash } =
+                            transaction;
+                        await this.indexTransaction(
+                            txid,
+                            vin,
+                            vout,
+                            blockHeight,
+                            blockHash,
+                            manager,
+                        );
+                    }
 
-                state.indexedBlockHeight = height;
-                await this.setState(state, {
-                    blockHash: blockHash,
-                    blockHeight: height,
+                    state.indexedBlockHeight = height;
+                    await this.setState(
+                        state,
+                        {
+                            blockHash: blockHash,
+                            blockHeight: height,
+                        },
+                        manager,
+                    );
                 });
             }
         } finally {

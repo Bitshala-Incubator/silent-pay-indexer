@@ -8,6 +8,8 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { BlockStateService } from '@/block-state/block-state.service';
 import { BlockState } from '@/block-state/block-state.entity';
+import { EntityManager } from 'typeorm';
+import { OperationState } from '@/operation-state/operation-state.entity';
 
 export abstract class BaseBlockDataProvider<OperationState> {
     protected abstract readonly logger: Logger;
@@ -26,6 +28,7 @@ export abstract class BaseBlockDataProvider<OperationState> {
         vout: TransactionOutput[],
         blockHeight: number,
         blockHash: string,
+        manager: EntityManager,
     ): Promise<void> {
         await this.indexerService.index(
             txid,
@@ -33,6 +36,7 @@ export abstract class BaseBlockDataProvider<OperationState> {
             vout,
             blockHeight,
             blockHash,
+            manager,
         );
     }
 
@@ -47,13 +51,14 @@ export abstract class BaseBlockDataProvider<OperationState> {
     async setState(
         state: OperationState,
         blockState: BlockState,
+        manager: EntityManager,
     ): Promise<void> {
-        await this.operationStateService.setOperationState(
-            this.operationStateKey,
-            state,
-        );
+        const operationState = new OperationState();
+        operationState.id = this.operationStateKey;
+        operationState.state = state;
 
-        await this.blockStateService.addBlockState(blockState);
+        await manager.save(OperationState, operationState);
+        await manager.save(BlockState, blockState);
     }
 
     abstract getBlockHash(height: number): Promise<string>;

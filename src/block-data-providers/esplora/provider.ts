@@ -13,6 +13,7 @@ import {
 import { TAPROOT_ACTIVATION_HEIGHT } from '@/common/constants';
 import { BlockStateService } from '@/block-state/block-state.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { DbTransactionService } from '@/db-transaction/db-transaction.service';
 
 @Injectable()
 export class EsploraProvider
@@ -31,6 +32,7 @@ export class EsploraProvider
         indexerService: IndexerService,
         operationStateService: OperationStateService,
         blockStateService: BlockStateService,
+        private readonly dbTransactionService: DbTransactionService,
     ) {
         super(
             configService,
@@ -79,17 +81,20 @@ export class EsploraProvider
                     : 0;
             const blockHash = await this.getBlockHash(blockHeight);
 
-            await this.setState(
-                {
-                    currentBlockHeight: 0,
-                    indexedBlockHeight: blockHeight,
-                    lastProcessedTxIndex: 0, // we don't take coinbase txn into account
-                },
-                {
-                    blockHash,
-                    blockHeight,
-                },
-            );
+            await this.dbTransactionService.execute(async (manager) => {
+                await this.setState(
+                    {
+                        currentBlockHeight: 0,
+                        indexedBlockHeight: blockHeight,
+                        lastProcessedTxIndex: 0, // we don't take coinbase txn into account
+                    },
+                    {
+                        blockHash,
+                        blockHeight,
+                    },
+                    manager,
+                );
+            });
         }
     }
 
@@ -144,36 +149,45 @@ export class EsploraProvider
             );
 
             try {
-                await Promise.all(
-                    batch.map(async (txid) => {
-                        const tx = await this.getTx(txid);
-                        const vin: TransactionInput[] = tx.vin.map((input) => ({
-                            txid: input.txid,
-                            vout: input.vout,
-                            scriptSig: input.scriptsig,
-                            prevOutScript: input.prevout.scriptpubkey,
-                            witness: input.witness,
-                        }));
-                        const vout = tx.vout.map((output) => ({
-                            scriptPubKey: output.scriptpubkey,
-                            value: output.value,
-                        }));
+                await this.dbTransactionService.execute(async (manager) => {
+                    await Promise.all(
+                        batch.map(async (txid) => {
+                            const tx = await this.getTx(txid);
+                            const vin: TransactionInput[] = tx.vin.map(
+                                (input) => ({
+                                    txid: input.txid,
+                                    vout: input.vout,
+                                    scriptSig: input.scriptsig,
+                                    prevOutScript: input.prevout.scriptpubkey,
+                                    witness: input.witness,
+                                }),
+                            );
+                            const vout = tx.vout.map((output) => ({
+                                scriptPubKey: output.scriptpubkey,
+                                value: output.value,
+                            }));
 
-                        await this.indexTransaction(
-                            txid,
-                            vin,
-                            vout,
-                            height,
-                            hash,
-                        );
-                    }, this),
-                );
+                            await this.indexTransaction(
+                                txid,
+                                vin,
+                                vout,
+                                height,
+                                hash,
+                                manager,
+                            );
+                        }, this),
+                    );
 
-                state.indexedBlockHeight = height;
-                state.lastProcessedTxIndex = i + this.batchSize - 1;
-                await this.setState(state, {
-                    blockHeight: height,
-                    blockHash: hash,
+                    state.indexedBlockHeight = height;
+                    state.lastProcessedTxIndex = i + this.batchSize - 1;
+                    await this.setState(
+                        state,
+                        {
+                            blockHeight: height,
+                            blockHash: hash,
+                        },
+                        manager,
+                    );
                 });
             } catch (error) {
                 this.logger.error(

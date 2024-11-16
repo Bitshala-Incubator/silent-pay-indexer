@@ -23,10 +23,6 @@ export class BlockStateService {
         )[0];
     }
 
-    async addBlockState(state: BlockState): Promise<void> {
-        await this.blockStateRepository.save(state);
-    }
-
     async removeState(state: BlockState): Promise<void> {
         await this.blockStateRepository.delete(state.blockHeight);
         await this.transactionService.deleteTransactionByBlockHash(

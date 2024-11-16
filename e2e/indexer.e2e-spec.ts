@@ -14,7 +14,7 @@ describe('Indexer', () => {
     beforeAll(async () => {
         const walletHelper = new WalletHelper();
         const bitcoinRPCUtil = new BitcoinRPCUtil();
-        const indexerService = new IndexerService({} as any);
+        const indexerService = new IndexerService();
         apiHelper = new ApiHelper();
 
         await bitcoinRPCUtil.createWallet('test_wallet');

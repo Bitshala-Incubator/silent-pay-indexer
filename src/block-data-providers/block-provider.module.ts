@@ -9,6 +9,8 @@ import { BitcoinCoreProvider } from '@/block-data-providers/bitcoin-core/provide
 import { EsploraProvider } from '@/block-data-providers/esplora/provider';
 import { BlockStateService } from '@/block-state/block-state.service';
 import { BlockStateModule } from '@/block-state/block-state.module';
+import { DbTransactionModule } from '@/db-transaction/db-transaction.module';
+import { DbTransactionService } from '@/db-transaction/db-transaction.service';
 
 @Module({
     imports: [
@@ -16,6 +18,7 @@ import { BlockStateModule } from '@/block-state/block-state.module';
         IndexerModule,
         ConfigModule,
         BlockStateModule,
+        DbTransactionModule,
     ],
     controllers: [],
     providers: [
@@ -26,12 +29,14 @@ import { BlockStateModule } from '@/block-state/block-state.module';
                 IndexerService,
                 OperationStateService,
                 BlockStateService,
+                DbTransactionService,
             ],
             useFactory: (
                 configService: ConfigService,
                 indexerService: IndexerService,
                 operationStateService: OperationStateService,
                 blockStateService: BlockStateService,
+                dbTransactionService: DbTransactionService,
             ) => {
                 switch (configService.get<ProviderType>('providerType')) {
                     case ProviderType.ESPLORA:
@@ -40,6 +45,7 @@ import { BlockStateModule } from '@/block-state/block-state.module';
                             indexerService,
                             operationStateService,
                             blockStateService,
+                            dbTransactionService,
                         );
                     case ProviderType.BITCOIN_CORE_RPC:
                         return new BitcoinCoreProvider(
@@ -47,6 +53,7 @@ import { BlockStateModule } from '@/block-state/block-state.module';
                             indexerService,
                             operationStateService,
                             blockStateService,
+                            dbTransactionService,
                         );
                     default:
                         throw Error('unrecognised provider type in config');
