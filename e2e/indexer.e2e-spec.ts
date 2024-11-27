@@ -1,4 +1,4 @@
-import { UTXO, WalletHelper } from '@e2e/helpers/wallet.helper';
+import { UTXO, WalletHelper, AddressType } from '@e2e/helpers/wallet.helper';
 import { transformTransaction } from '@e2e/helpers/common.helper';
 import { IndexerService } from '@/indexer/indexer.service';
 import { initialiseDep } from '@e2e/setup';
@@ -26,45 +26,63 @@ describe('Indexer', () => {
         await shutdownDep();
     });
 
-    it('p2wpkh - should ensure that the correct silent block is fetched', async () => {
-        const taprootOutput = walletHelper.generateAddresses(1, 'p2tr')[0];
-        const p2wkhOutputs = walletHelper.generateAddresses(6, 'p2wpkh');
-        const utxos: UTXO[] = [];
+    const addressTypes: AddressType[] = [
+        AddressType.P2WPKH,
+        AddressType.P2SH_P2WPKH,
+        AddressType.P2PKH,
+        AddressType.P2TR,
+    ];
 
-        for (const output of p2wkhOutputs) {
-            const utxo = await walletHelper.addAmountToAddress(output, 1);
-            utxos.push(utxo);
-        }
+    it.each(addressTypes)(
+        '%s - should ensure that the correct silent block is fetched',
+        async (addressType) => {
+            const taprootOutput = walletHelper.generateAddresses(
+                1,
+                AddressType.P2TR,
+            )[0];
+            const outputs = walletHelper.generateAddresses(6, addressType);
+            const utxos: UTXO[] = [];
 
-        const [transaction, txid, blockHash] =
-            await walletHelper.craftAndSpendTransaction(
-                utxos,
-                taprootOutput,
-                5.999,
-                0.001,
+            for (const [index, output] of outputs.entries()) {
+                const utxo = await walletHelper.addAmountToAddress(
+                    output,
+                    1,
+                    addressType,
+                    index,
+                );
+                utxos.push(utxo);
+            }
+
+            const [transaction, txid, blockHash] =
+                await walletHelper.craftAndSpendTransaction(
+                    utxos,
+                    taprootOutput,
+                    5.999,
+                    0.001,
+                );
+
+            const transformedTransaction = transformTransaction(
+                transaction,
+                txid,
+                blockHash,
+                walletHelper.currentBlockCount,
+                outputs,
+                indexerService,
             );
 
-        const transformedTransaction = transformTransaction(
-            transaction,
-            txid,
-            blockHash,
-            walletHelper.currentBlockCount,
-            p2wkhOutputs,
-            indexerService,
-        );
+            const silentBlock = silentBlockService.encodeSilentBlock([
+                transformedTransaction,
+            ]);
 
-        const silentBlock = silentBlockService.encodeSilentBlock([
-            transformedTransaction,
-        ]);
+            await new Promise((resolve) => setTimeout(resolve, 15000));
+            const response = await apiHelper.get(
+                `/silent-block/hash/${blockHash}`,
+                {
+                    responseType: 'arraybuffer',
+                },
+            );
 
-        await new Promise((resolve) => setTimeout(resolve, 15000));
-        const response = await apiHelper.get(
-            `/silent-block/hash/${blockHash}`,
-            {
-                responseType: 'arraybuffer',
-            },
-        );
-
-        expect(response.data as Buffer).toEqual(silentBlock);
-    });
+            expect(response.data as Buffer).toEqual(silentBlock);
+        },
+    );
 });

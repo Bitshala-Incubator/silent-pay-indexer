@@ -66,6 +66,7 @@
     "bitcoinjs-lib": "^6.1.6-rc.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "ecpair": "^2.1.0",
     "eslint": "^8.0.1",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-import": "^2.26.0",

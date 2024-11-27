@@ -22,7 +22,9 @@ export function generateScanTweakAndOutputEntity(
             witness: isWitness
                 ? input.witness.map((v) => v.toString('hex'))
                 : undefined,
-            prevOutScript: outputs[index].output.toString('hex'),
+            prevOutScript: outputs[index].redeem
+                ? outputs[index].redeem.output.toString('hex')
+                : outputs[index].output.toString('hex'),
         };
     });
     const txouts = transaction.outs.map((output) => ({
