@@ -34,7 +34,7 @@ export class SilentBlocksService {
         return length;
     }
 
-    private encodeSilentBlock(transactions: Transaction[]): Buffer {
+    public encodeSilentBlock(transactions: Transaction[]): Buffer {
         const block = Buffer.alloc(this.getSilentBlockLength(transactions));
         let cursor = 0;
 
