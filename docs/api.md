@@ -1,0 +1,47 @@
+# silent-pay-indexer HTTP API
+
+## Transactions
+
+### `GET '/transactions/blockHeight/:blockHeight'`
+
+Returns transaction from the block height.
+
+### `GET '/transactions/blockHash/:blockHash'`
+
+Returns transaction from the block hash.
+
+## Silent Block
+
+### `GET '/silent-block/blockHeight/:blockHeight'`
+
+Returns silent block from the block height.
+
+### `GET '/silent-block/blockHash/:blockHash'`
+
+Returns silent block from the block hash.
+
+## Silent Block Format
+
+- `type`
+- `transactions[]`
+    - `txid`
+    - `outputs[]`
+        - `value`
+        - `pubKey`
+        - `vout`
+    - `scanTweak`
+
+## Transaction Format
+
+- `txid`
+- `vin[]`
+    - `txid`
+    - `vout`
+    - `scriptSig`
+    - `witness[]`
+    - `prevOutScript`
+- `vout[]`
+    - `scriptPubKey`
+    - `value`
+- `blockHeight`
+- `blockHash`
