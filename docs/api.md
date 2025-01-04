@@ -1,24 +1,25 @@
-# silent-pay-indexer HTTP API
+# Silent Payments Indexer HTTP API
 
 ## Transactions
 
 ### `GET '/transactions/blockHeight/:blockHeight'`
 
-Returns transaction from the block height.
+
+Returns an array of transactions from the block height.
 
 ### `GET '/transactions/blockHash/:blockHash'`
 
-Returns transaction from the block hash.
+Returns an array of transactions from the block hash.
 
 ## Silent Block
 
 ### `GET '/silent-block/blockHeight/:blockHeight'`
 
-Returns silent block from the block height.
+Returns a serialized silent block from the block height.
 
 ### `GET '/silent-block/blockHash/:blockHash'`
 
-Returns silent block from the block hash.
+Returns a serialized silent block from the block hash.
 
 ## Silent Block Format
 
