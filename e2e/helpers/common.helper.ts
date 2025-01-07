@@ -31,10 +31,8 @@ export function generateScanTweakAndOutputEntity(
         value: output.value,
     }));
 
-    const [scanTweak, outputEntity] = new IndexerService().computeScanTweak(
-        txins,
-        txouts,
-    );
+    const [scanTweak, outputEntity] =
+        new IndexerService().deriveOutputsAndComputeScanTweak(txins, txouts);
 
     return [scanTweak.toString('hex'), outputEntity];
 }
@@ -49,7 +47,6 @@ export function transactionToEntity(
     const entityTransaction = new TransactionEntity();
     entityTransaction.blockHash = blockHash;
     entityTransaction.blockHeight = blockHeight;
-    entityTransaction.isSpent = false;
     [entityTransaction.scanTweak, entityTransaction.outputs] =
         generateScanTweakAndOutputEntity(transaction, outputs);
     entityTransaction.id = txid;

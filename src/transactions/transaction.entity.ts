@@ -1,10 +1,5 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
-
-export type TransactionOutput = {
-    pubKey: string;
-    vout: number;
-    value: number;
-};
+import { TransactionOutput } from '@/transactions/transaction-output.entity';
+import { Column, Entity, OneToMany, PrimaryColumn } from 'typeorm';
 
 @Entity()
 export class Transaction {
@@ -20,9 +15,10 @@ export class Transaction {
     @Column({ type: 'text', nullable: false })
     scanTweak: string;
 
-    @Column({ type: 'simple-json', nullable: false })
+    @OneToMany(() => TransactionOutput, (output) => output.transaction, {
+        cascade: true,
+    })
     outputs: TransactionOutput[];
-
-    @Column({ type: 'boolean', nullable: false })
-    isSpent: boolean;
 }
+
+export { TransactionOutput };

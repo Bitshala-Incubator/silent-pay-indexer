@@ -13,11 +13,17 @@ export class TransactionsService {
     async getTransactionByBlockHeight(
         blockHeight: number,
     ): Promise<Transaction[]> {
-        return this.transactionRepository.find({ where: { blockHeight } });
+        return this.transactionRepository.find({
+            where: { blockHeight },
+            relations: { outputs: true },
+        });
     }
 
     async getTransactionByBlockHash(blockHash: string): Promise<Transaction[]> {
-        return this.transactionRepository.find({ where: { blockHash } });
+        return this.transactionRepository.find({
+            where: { blockHash },
+            relations: { outputs: true },
+        });
     }
 
     async saveTransaction(transaction: Transaction): Promise<Transaction> {

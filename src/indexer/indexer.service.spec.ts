@@ -1,5 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Transaction } from '@/transactions/transaction.entity';
+import {
+    Transaction,
+    TransactionOutput,
+} from '@/transactions/transaction.entity';
 import { IndexerService } from '@/indexer/indexer.service';
 import { testData } from '@/indexer/indexer.fixture';
 import { DataSource } from 'typeorm';
@@ -15,7 +18,7 @@ describe('IndexerService', () => {
             type: 'sqlite',
             database: ':memory:',
             dropSchema: true,
-            entities: [Transaction],
+            entities: [Transaction, TransactionOutput],
             synchronize: true,
             logging: false,
         });

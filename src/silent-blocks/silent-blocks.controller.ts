@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Res } from '@nestjs/common';
+import { Controller, Get, Param, Query, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { SilentBlocksService } from '@/silent-blocks/silent-blocks.service';
 
@@ -25,10 +25,15 @@ export class SilentBlocksController {
     @Get('hash/:blockHash')
     async getSilentBlockByHash(
         @Param('blockHash') blockHash: string,
+        @Query('filterSpent') filterSpentFlag = 'false',
         @Res() res: Response,
     ) {
+        // Convert  to boolean
+        const filterSpent = filterSpentFlag === 'true';
+
         const buffer = await this.silentBlocksService.getSilentBlockByHash(
             blockHash,
+            filterSpent,
         );
 
         res.set({
