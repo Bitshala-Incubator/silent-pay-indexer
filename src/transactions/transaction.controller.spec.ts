@@ -17,7 +17,7 @@ const mockTransactions: Transaction[] = [
                 pubKey: '51203e9fce73d4e77a4809908e3c3a2e54ee147b9312dc5044a193d1fc85de46e3c1',
                 vout: 1,
                 value: 100000,
-                id: 0,
+                transactionId: '1',
                 isSpent: false,
                 transaction: new Transaction(),
             },
@@ -35,7 +35,7 @@ const mockTransactions: Transaction[] = [
                 pubKey: '51203e9fce73d4e77a4809908e3c3a2e54ee147b9312dc5044a193d1fc85de46e3c1',
                 vout: 2,
                 value: 100000,
-                id: 0,
+                transactionId: '2',
                 isSpent: false,
                 transaction: new Transaction(),
             },
@@ -53,7 +53,7 @@ const mockTransactions: Transaction[] = [
                 pubKey: '5120f4c2da807f89cb1501f1a77322a895acfb93c28e08ed2724d2beb8e44539ba38',
                 vout: 3,
                 value: 100000,
-                id: 0,
+                transactionId: '3',
                 isSpent: false,
                 transaction: new Transaction(),
             },
@@ -114,7 +114,10 @@ describe('TransactionController', () => {
             blockHash,
         );
 
-        expect(getTransactionByBlockHashSpy).toHaveBeenCalledWith(blockHash);
+        expect(getTransactionByBlockHashSpy).toHaveBeenCalledWith(
+            blockHash,
+            false,
+        );
         expect(controllerResult).toEqual({
             transactions: mockTransactions,
         });

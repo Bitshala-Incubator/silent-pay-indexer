@@ -1,11 +1,9 @@
 import { Payment, Transaction } from 'bitcoinjs-lib';
 import { IndexerService } from '@/indexer/indexer.service';
-import {
-    Transaction as TransactionEntity,
-    TransactionOutput,
-} from '@/transactions/transaction.entity';
+import { Transaction as TransactionEntity } from '@/transactions/transaction.entity';
 import { SATS_PER_BTC } from '@/common/constants';
 import * as currency from 'currency.js';
+import { TransactionOutput } from '@/transactions/transaction-output.entity';
 
 export function generateScanTweakAndOutputEntity(
     transaction: Transaction,
@@ -31,10 +29,10 @@ export function generateScanTweakAndOutputEntity(
         value: output.value,
     }));
 
-    const [scanTweak, outputEntity] =
+    const { scanTweak, eligibleOutputs } =
         new IndexerService().deriveOutputsAndComputeScanTweak(txins, txouts);
 
-    return [scanTweak.toString('hex'), outputEntity];
+    return [scanTweak.toString('hex'), eligibleOutputs];
 }
 
 export function transactionToEntity(

@@ -18,6 +18,11 @@ export type TransactionOutput = {
     value: number;
 };
 
+export type ScanTweakAndOutputs = {
+    scanTweak: Buffer;
+    eligibleOutputs: TransactionOutputEntity[];
+};
+
 @Injectable()
 export class IndexerService {
     async index(
@@ -32,13 +37,13 @@ export class IndexerService {
 
         const scanResult = this.deriveOutputsAndComputeScanTweak(vin, vout);
         if (scanResult !== null) {
-            const [scanTweak, eligibleOutputs] = scanResult;
+            const { scanTweak, eligibleOutputs: outputs } = scanResult;
             const transaction = new Transaction();
             transaction.id = txid;
             transaction.blockHeight = blockHeight;
             transaction.blockHash = blockHash;
             transaction.scanTweak = scanTweak.toString('hex');
-            transaction.outputs = eligibleOutputs;
+            transaction.outputs = outputs;
 
             await manager.save(Transaction, transaction);
         }
@@ -48,30 +53,32 @@ export class IndexerService {
         manager: EntityManager,
         inputs: TransactionInput[],
     ) {
-        const outputs = await manager.find(TransactionOutputEntity, {
-            where: inputs.map((input) => ({
-                transaction: { id: input.txid },
-                vout: input.vout,
-            })),
+        // Build WHERE clause and parameters dynamically
+        const conditions = [];
+        const parameters: Record<string, string | number> = {};
+
+        inputs.forEach((input, idx) => {
+            conditions.push(
+                `(transactionId = :txid_${idx} AND vout = :vout_${idx})`,
+            );
+            parameters[`txid_${idx}`] = input.txid;
+            parameters[`vout_${idx}`] = input.vout;
         });
 
-        if (outputs.length == 0) {
-            return;
-        }
-
-        // Mark each output as spent
-        const spentOutputs = outputs.map((output) => ({
-            ...output,
-            isSpent: true,
-        }));
-
-        await manager.save(TransactionOutputEntity, spentOutputs);
+        // Execute bulk update
+        await manager
+            .createQueryBuilder()
+            .update(TransactionOutputEntity)
+            .set({ isSpent: true })
+            .where(conditions.join(' OR '))
+            .setParameters(parameters)
+            .execute();
     }
 
     public deriveOutputsAndComputeScanTweak(
         vin: TransactionInput[],
         vout: TransactionOutput[],
-    ): [Buffer, TransactionOutputEntity[]] | null {
+    ): ScanTweakAndOutputs | null {
         const eligibleOutputs: TransactionOutputEntity[] = [];
 
         // verify if the transaction contains at least one BIP341 P2TR output
@@ -79,10 +86,8 @@ export class IndexerService {
         let n = 0;
         for (const output of vout) {
             if (this.isP2TR(output.scriptPubKey)) {
-                const outputEntity = new TransactionOutputEntity();
-                outputEntity.pubKey = output.scriptPubKey.substring(4);
-                outputEntity.value = output.value;
-                outputEntity.vout = n;
+                const outputEntity = TransactionOutputEntity.from(output, n);
+
                 eligibleOutputs.push(outputEntity);
             }
             n++;
@@ -126,7 +131,7 @@ export class IndexerService {
             publicKeyTweakMul(sumOfPublicKeys, inputHash, true),
         );
 
-        return [scanTweak, eligibleOutputs];
+        return { scanTweak, eligibleOutputs };
     }
 
     private isP2TR(spk: string): boolean {

@@ -16,9 +16,8 @@ export class Transaction {
     scanTweak: string;
 
     @OneToMany(() => TransactionOutput, (output) => output.transaction, {
+        eager: true,
         cascade: true,
     })
     outputs: TransactionOutput[];
 }
-
-export { TransactionOutput };

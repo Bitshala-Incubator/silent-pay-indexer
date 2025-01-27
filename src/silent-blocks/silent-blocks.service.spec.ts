@@ -7,11 +7,9 @@ import {
 } from '@/silent-blocks/silent-blocks.service.fixtures';
 import { SilentBlocksGateway } from '@/silent-blocks/silent-blocks.gateway';
 import { DataSource, Repository } from 'typeorm';
-import {
-    Transaction,
-    TransactionOutput,
-} from '@/transactions/transaction.entity';
+import { Transaction } from '@/transactions/transaction.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { TransactionOutput } from '@/transactions/transaction-output.entity';
 
 describe('SilentBlocksService', () => {
     let service: SilentBlocksService;

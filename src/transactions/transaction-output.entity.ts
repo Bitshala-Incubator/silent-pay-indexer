@@ -1,16 +1,26 @@
 import { Transaction } from '@/transactions/transaction.entity';
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { TransactionOutput as Output } from '@/indexer/indexer.service';
 
 @Entity()
 export class TransactionOutput {
-    @PrimaryGeneratedColumn()
-    id: number; // Auto-generated primary key
+    static from(output: Output, index: number): TransactionOutput {
+        const newOutput = new TransactionOutput();
+        newOutput.pubKey = output.scriptPubKey.substring(4);
+        newOutput.value = output.value;
+        newOutput.vout = index;
 
-    @Column({ type: 'text', nullable: false })
-    pubKey: string; // Public key associated with the transaction output
+        return newOutput;
+    }
 
-    @Column({ type: 'integer', nullable: false })
+    @PrimaryColumn({ type: 'text', nullable: false })
+    transactionId: string;
+
+    @PrimaryColumn({ type: 'integer', nullable: false })
     vout: number; // Index of the output in the transaction
+
+    @Column({ type: 'varchar', length: 64 }) // 32 bytes * 2 [HEX]
+    pubKey: string; //  Public key associated with the transaction output
 
     @Column({ type: 'integer', nullable: false })
     value: number; // Value of the output
@@ -19,8 +29,8 @@ export class TransactionOutput {
     isSpent: boolean;
 
     @ManyToOne(() => Transaction, (transaction) => transaction.outputs, {
-        eager: true,
         onDelete: 'CASCADE',
     })
+    @JoinColumn({ name: 'transactionId' })
     transaction: Transaction;
 }

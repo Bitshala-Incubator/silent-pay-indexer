@@ -84,13 +84,8 @@ describe('Indexer', () => {
         const utxos: UTXO[] = [];
 
         for (const [index, output] of outputs.entries()) {
-            const utxo = await walletHelper.addFundToUTXO(
-                output,
-                1,
-                AddressType.P2WPKH,
-                index,
-            );
-            utxos.push(utxo);
+            const utxo = await walletHelper.addFundToUTXO(output, 1);
+            utxos.push({ ...utxo, addressType: AddressType.P2WPKH, index });
         }
 
         const { transaction, txid, blockHash } =

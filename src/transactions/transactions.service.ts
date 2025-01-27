@@ -19,7 +19,28 @@ export class TransactionsService {
         });
     }
 
-    async getTransactionByBlockHash(blockHash: string): Promise<Transaction[]> {
+    async getTransactionByBlockHash(
+        blockHash: string,
+        filterSpent: boolean,
+    ): Promise<Transaction[]> {
+        if (filterSpent) {
+            return this.transactionRepository
+                .createQueryBuilder('transaction')
+                .leftJoinAndSelect('transaction.outputs', 'output') // Join outputs to include them in the results
+                .where('transaction.blockHash = :blockHash', { blockHash })
+                .andWhere(
+                    'transaction.id IN (' +
+                        this.transactionRepository
+                            .createQueryBuilder('subTransaction')
+                            .select('subTransaction.id')
+                            .leftJoin('subTransaction.outputs', 'subOutput')
+                            .where('subOutput.isSpent = false')
+                            .getQuery() +
+                        ')',
+                )
+                .getMany();
+        }
+
         return this.transactionRepository.find({
             where: { blockHash },
             relations: { outputs: true },

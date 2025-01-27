@@ -70,14 +70,11 @@ export class SilentBlocksService {
         blockHash: string,
         filterSpent: boolean,
     ): Promise<Buffer> {
-        let transactions =
-            await this.transactionsService.getTransactionByBlockHash(blockHash);
-
-        if (filterSpent) {
-            transactions = transactions.filter((transaction) =>
-                transaction.outputs.some((output) => !output.isSpent),
+        const transactions =
+            await this.transactionsService.getTransactionByBlockHash(
+                blockHash,
+                filterSpent,
             );
-        }
 
         return this.encodeSilentBlock(transactions);
     }
