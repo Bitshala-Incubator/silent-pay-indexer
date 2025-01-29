@@ -20,6 +20,7 @@ export class SilentBlocksController {
     ) {
         const buffer = await this.silentBlocksService.getSilentBlockByHeight(
             blockHeight,
+            false,
         );
 
         res.set({

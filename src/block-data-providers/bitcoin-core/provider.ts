@@ -115,8 +115,6 @@ export class BitcoinCoreProvider
         try {
             const tipHeight = await this.getTipHeight();
 
-            console.log(tipHeight);
-
             if (tipHeight <= state.indexedBlockHeight) {
                 this.logger.debug(
                     `No new blocks found. Current tip height: ${tipHeight}`,

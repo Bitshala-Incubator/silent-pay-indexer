@@ -12,6 +12,7 @@ export class TransactionController {
         const transactions =
             await this.transactionsService.getTransactionByBlockHeight(
                 blockHeight,
+                false,
             );
 
         return { transactions: transactions };
