@@ -153,7 +153,7 @@ export class EsploraProvider
 
             try {
                 await this.dbTransactionService.execute(async (manager) => {
-                    const spentOutpoints: string[] = [];
+                    const spentOutpoints: [string, number][] = [];
 
                     await Promise.all(
                         batch.map(async (txid) => {
@@ -190,10 +190,10 @@ export class EsploraProvider
                     );
 
                     await manager.query(
-                        `UPDATE transaction_output SET isSpent = true WHERE id IN (${spentOutpoints
-                            .map(() => '?')
+                        `UPDATE transaction_output SET isSpent = true WHERE (transactionId, vout) IN (${spentOutpoints
+                            .map(() => '(?,?)')
                             .join(',')})`,
-                        spentOutpoints,
+                        spentOutpoints.flat(),
                     );
 
                     state.indexedBlockHeight = height;
