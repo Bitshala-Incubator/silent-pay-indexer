@@ -1,10 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionsService } from '@/transactions/transactions.service';
 import { SilentBlocksService } from '@/silent-blocks/silent-blocks.service';
-import {
-    silentBlockEncodingFixture,
-    verifyFilterTransactionFixture,
-} from '@/silent-blocks/silent-blocks.service.fixtures';
+import { silentBlockEncodingFixture } from '@/silent-blocks/silent-blocks.service.fixtures';
 import { SilentBlocksGateway } from '@/silent-blocks/silent-blocks.gateway';
 import { DataSource, Repository } from 'typeorm';
 import { Transaction } from '@/transactions/transaction.entity';
@@ -80,64 +77,31 @@ describe('SilentBlocksService', () => {
         },
     );
 
-    it('should omit transaction if all outputs are spent', async () => {
+    it('should omit spent Outputs if filterSpent is set to true', async () => {
         // Save initial transactions to the repository
         await transactionRepository.save(
-            verifyFilterTransactionFixture.transactions,
+            silentBlockEncodingFixture[0].transactions,
         );
 
-        // Fetch and verify the fully encoded block
+        // Fetch and verify non inclusion of spent outputs
         let encodedBlock = await service.getSilentBlockByHash(
-            verifyFilterTransactionFixture.blockHash,
+            silentBlockEncodingFixture[0].blockHash,
             true,
         );
 
         expect(encodedBlock.toString('hex')).toEqual(
-            verifyFilterTransactionFixture.fullyEncodedBlock,
+            silentBlockEncodingFixture[0].filteredOutputEncodedBlockHex,
         );
 
-        // Fetch outputs to spend
-        const transactionToSpend =
-            verifyFilterTransactionFixture.transactions[0];
-        const outputs = await transactionOutputRepository.find({
-            where: { transaction: { id: transactionToSpend.id } },
-        });
+        // Mark all outputs as spent
+        await transactionOutputRepository.update({}, { isSpent: true });
 
-        // Mark Some output as Spent
-        const partiallySpentOutputs = outputs.map((output, index) => ({
-            ...output,
-            isSpent: index % 2 == 0,
-        }));
-
-        await transactionOutputRepository.save(partiallySpentOutputs);
-
-        // Fetch and verify that all transactions are returned
         encodedBlock = await service.getSilentBlockByHash(
-            verifyFilterTransactionFixture.blockHash,
+            silentBlockEncodingFixture[0].blockHash,
             true,
         );
 
-        expect(encodedBlock.toString('hex')).toEqual(
-            verifyFilterTransactionFixture.fullyEncodedBlock,
-        );
-
-        // Mark All outputs as spent
-        const fullySpentOutputs = outputs.map((output) => ({
-            ...output,
-            isSpent: true,
-        }));
-
-        await transactionOutputRepository.save(fullySpentOutputs);
-
-        // Fetch and verify that transactions with fully spent outputs are omitted
-        encodedBlock = await service.getSilentBlockByHash(
-            verifyFilterTransactionFixture.blockHash,
-            true,
-        );
-
-        expect(encodedBlock.toString('hex')).toEqual(
-            verifyFilterTransactionFixture.partiallyEncodeBlock,
-        );
+        expect(encodedBlock.toString('hex')).toEqual('0000');
     });
 
     afterEach(async () => {

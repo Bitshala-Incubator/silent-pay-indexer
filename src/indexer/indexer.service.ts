@@ -33,8 +33,6 @@ export class IndexerService {
         blockHash: string,
         manager: EntityManager,
     ): Promise<void> {
-        await this.markOutputsAsSpent(manager, vin);
-
         const scanResult = this.deriveOutputsAndComputeScanTweak(vin, vout);
         if (scanResult !== null) {
             const { scanTweak, eligibleOutputs: outputs } = scanResult;
@@ -47,32 +45,6 @@ export class IndexerService {
 
             await manager.save(Transaction, transaction);
         }
-    }
-
-    async markOutputsAsSpent(
-        manager: EntityManager,
-        inputs: TransactionInput[],
-    ) {
-        // Build WHERE clause and parameters dynamically
-        const conditions = [];
-        const parameters: Record<string, string | number> = {};
-
-        inputs.forEach((input, idx) => {
-            conditions.push(
-                `(transactionId = :txid_${idx} AND vout = :vout_${idx})`,
-            );
-            parameters[`txid_${idx}`] = input.txid;
-            parameters[`vout_${idx}`] = input.vout;
-        });
-
-        // Execute bulk update
-        await manager
-            .createQueryBuilder()
-            .update(TransactionOutputEntity)
-            .set({ isSpent: true })
-            .where(conditions.join(' OR '))
-            .setParameters(parameters)
-            .execute();
     }
 
     public deriveOutputsAndComputeScanTweak(

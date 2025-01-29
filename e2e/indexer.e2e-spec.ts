@@ -75,7 +75,7 @@ describe('Indexer', () => {
         },
     );
 
-    it('Should exclude spent transactions when the "FilterSpent" flag is set to true', async () => {
+    it('Should exclude spent outputs when the "FilterSpent" flag is set to true', async () => {
         const taprootOutput = walletHelper.generateAddresses(
             1,
             AddressType.P2TR,
