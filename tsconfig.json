@@ -19,7 +19,8 @@
     "noFallthroughCasesInSwitch": false,
     "paths": {
       "@/*": ["src/*"],
-      "@e2e/*": ["e2e/*"]
+      "@e2e/*": ["e2e/*"],
+      "@migrations/*": ["migrations/*"]
     }
   }
 }

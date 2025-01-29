@@ -5,7 +5,7 @@ const config: Config.InitialOptions = {
     verbose: true,
     moduleFileExtensions: ['js', 'json', 'ts'],
     rootDir: '.',
-    roots: ['<rootDir>/src/'],
+    roots: ['<rootDir>/src/', '<rootDir>/tests/'],
     testRegex: '.*\\.spec\\.ts$',
     transform: {
         '^.+\\.(t|j)s$': 'ts-jest',
@@ -29,6 +29,7 @@ const config: Config.InitialOptions = {
     testEnvironment: 'node',
     moduleNameMapper: {
         '@/(.*)': '<rootDir>/src/$1',
+        '@migrations/(.*)': '<rootDir>/migrations/$1',
     },
 };
 export default config;
