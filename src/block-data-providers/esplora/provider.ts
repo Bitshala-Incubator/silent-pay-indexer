@@ -169,9 +169,7 @@ export class EsploraProvider
                             );
 
                             for (const input of vin) {
-                                spentOutpoints.push(
-                                    `${input.txid}:${input.vout}`,
-                                );
+                                spentOutpoints.push([input.txid, input.vout]);
                             }
                             const vout = tx.vout.map((output) => ({
                                 scriptPubKey: output.scriptpubkey,
