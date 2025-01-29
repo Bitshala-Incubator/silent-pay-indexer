@@ -57,6 +57,7 @@ describe('SilentBlocksService', () => {
 
             const encodedBlock = await service.getSilentBlockByHeight(
                 blockHeight,
+                false,
             );
 
             expect(encodedBlock.toString('hex')).toEqual(encodedBlockHex);

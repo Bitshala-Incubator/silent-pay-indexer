@@ -97,6 +97,7 @@ describe('TransactionController', () => {
 
         expect(getTransactionByBlockHeightSpy).toHaveBeenCalledWith(
             blockHeight,
+            false,
         );
         expect(controllerResult).toEqual({ transactions: mockTransactions });
     });
