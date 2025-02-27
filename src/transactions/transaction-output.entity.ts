@@ -4,7 +4,7 @@ import { TransactionOutput as Output } from '@/indexer/indexer.service';
 
 @Entity()
 export class TransactionOutput {
-    static from(output: Output, index: number): TransactionOutput {
+    static fromOutput(output: Output, index: number): TransactionOutput {
         const newOutput = new TransactionOutput();
         newOutput.pubKey = output.scriptPubKey.substring(4);
         newOutput.value = output.value;

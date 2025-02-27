@@ -58,7 +58,10 @@ export class IndexerService {
         let n = 0;
         for (const output of vout) {
             if (this.isP2TR(output.scriptPubKey)) {
-                const outputEntity = TransactionOutputEntity.from(output, n);
+                const outputEntity = TransactionOutputEntity.fromOutput(
+                    output,
+                    n,
+                );
 
                 eligibleOutputs.push(outputEntity);
             }
