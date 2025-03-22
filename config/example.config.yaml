@@ -2,16 +2,16 @@ db:
   path: '~/.silent-pay-indexer/db/database.sqlite'
   synchronize: false
 app:
-  port: 3000
+  port: 80
   verbose: false
   debug: true
   network: regtest
   requestRetry:
-    delay: 500       # delay in Milliseconds
+    delay: 500 # delay in Milliseconds
     count: 3
 providerType: BITCOIN_CORE_RPC
 bitcoinCore:
-  protocol: http    # http | https
+  protocol: http # http | https
   rpcHost: localhost
   rpcPass: password
   rpcUser: polaruser
