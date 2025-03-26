@@ -12,6 +12,7 @@ export class TransactionController {
         const transactions =
             await this.transactionsService.getTransactionByBlockHeight(
                 blockHeight,
+                false,
             );
 
         return { transactions: transactions };
@@ -20,7 +21,10 @@ export class TransactionController {
     @Get('blockHash/:blockHash')
     async getTransactionByBlockHash(@Param('blockHash') blockHash: string) {
         const transactions =
-            await this.transactionsService.getTransactionByBlockHash(blockHash);
+            await this.transactionsService.getTransactionByBlockHash(
+                blockHash,
+                false,
+            );
 
         return { transactions: transactions };
     }

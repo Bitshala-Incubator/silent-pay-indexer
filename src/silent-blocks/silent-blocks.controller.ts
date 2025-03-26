@@ -1,4 +1,11 @@
-import { Controller, Get, Param, Res } from '@nestjs/common';
+import {
+    Controller,
+    Get,
+    Param,
+    ParseBoolPipe,
+    Query,
+    Res,
+} from '@nestjs/common';
 import { Response } from 'express';
 import { SilentBlocksService } from '@/silent-blocks/silent-blocks.service';
 
@@ -13,6 +20,7 @@ export class SilentBlocksController {
     ) {
         const buffer = await this.silentBlocksService.getSilentBlockByHeight(
             blockHeight,
+            false,
         );
 
         res.set({
@@ -25,10 +33,13 @@ export class SilentBlocksController {
     @Get('hash/:blockHash')
     async getSilentBlockByHash(
         @Param('blockHash') blockHash: string,
+        @Query('filterSpent', new ParseBoolPipe({ optional: true }))
+        filterSpent = false,
         @Res() res: Response,
     ) {
         const buffer = await this.silentBlocksService.getSilentBlockByHash(
             blockHash,
+            filterSpent,
         );
 
         res.set({
