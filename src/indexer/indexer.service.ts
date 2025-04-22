@@ -1,7 +1,5 @@
-import {
-    Transaction,
-    TransactionOutput as TransactionOutputEntity,
-} from '@/transactions/transaction.entity';
+import { Transaction } from '@/transactions/transaction.entity';
+import { TransactionOutput as TransactionOutputEntity } from '@/transactions/transaction-output.entity';
 import { createTaggedHash, extractPubKeyFromScript } from '@/common/common';
 import { publicKeyCombine, publicKeyTweakMul } from 'secp256k1';
 import { Injectable } from '@nestjs/common';
@@ -20,6 +18,11 @@ export type TransactionOutput = {
     value: number;
 };
 
+export type ScanTweakAndOutputs = {
+    scanTweak: Buffer;
+    eligibleOutputs: TransactionOutputEntity[];
+};
+
 @Injectable()
 export class IndexerService {
     async index(
@@ -30,42 +33,42 @@ export class IndexerService {
         blockHash: string,
         manager: EntityManager,
     ): Promise<void> {
-        const scanResult = this.computeScanTweak(vin, vout);
+        const scanResult = this.deriveOutputsAndComputeScanTweak(vin, vout);
         if (scanResult !== null) {
-            const [scanTweak, eligibleOutputPubKeys] = scanResult;
+            const { scanTweak, eligibleOutputs: outputs } = scanResult;
             const transaction = new Transaction();
             transaction.id = txid;
             transaction.blockHeight = blockHeight;
             transaction.blockHash = blockHash;
             transaction.scanTweak = scanTweak.toString('hex');
-            transaction.outputs = eligibleOutputPubKeys;
-            transaction.isSpent = false;
+            transaction.outputs = outputs;
 
             await manager.save(Transaction, transaction);
         }
     }
 
-    public computeScanTweak(
+    public deriveOutputsAndComputeScanTweak(
         vin: TransactionInput[],
         vout: TransactionOutput[],
-    ): [Buffer, TransactionOutputEntity[]] | null {
-        const eligibleOutputPubKeys: TransactionOutputEntity[] = [];
+    ): ScanTweakAndOutputs | null {
+        const eligibleOutputs: TransactionOutputEntity[] = [];
 
         // verify if the transaction contains at least one BIP341 P2TR output
         // this output could be a potential silent pay
         let n = 0;
         for (const output of vout) {
             if (this.isP2TR(output.scriptPubKey)) {
-                eligibleOutputPubKeys.push({
-                    pubKey: output.scriptPubKey.substring(4),
-                    value: output.value,
-                    vout: n,
-                });
+                const outputEntity = TransactionOutputEntity.fromOutput(
+                    output,
+                    n,
+                );
+
+                eligibleOutputs.push(outputEntity);
             }
             n++;
         }
 
-        if (eligibleOutputPubKeys.length === 0) return null;
+        if (eligibleOutputs.length === 0) return null;
 
         // verify that the transaction does not spend an output with SegWit version > 1
         // this would make the transaction invalid for silent payment v0
@@ -103,7 +106,7 @@ export class IndexerService {
             publicKeyTweakMul(sumOfPublicKeys, inputHash, true),
         );
 
-        return [scanTweak, eligibleOutputPubKeys];
+        return { scanTweak, eligibleOutputs };
     }
 
     private isP2TR(spk: string): boolean {

@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "type": "node",
+        "request": "launch",
+        "name": "Debug e2e Test",
+        "runtimeExecutable": "npm",
+        "runtimeArgs": [
+          "run",
+          "test:e2e",
+          "--",
+          "--inspect-brk"
+        ],
+        "console": "integratedTerminal"
+      }
+    ]
+  }
