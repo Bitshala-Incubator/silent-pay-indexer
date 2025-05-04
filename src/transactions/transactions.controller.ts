@@ -5,9 +5,9 @@ import { TransactionsService } from '@/transactions/transactions.service';
 export class TransactionController {
     constructor(private readonly transactionsService: TransactionsService) {}
 
-    @Get('blockHeight/:blockHeight')
+    @Get('height/:height')
     async getTransactionByBlockHeight(
-        @Param('blockHeight') blockHeight: number,
+        @Param('height') blockHeight: number,
         @Query('filterSpent', new ParseBoolPipe({ optional: true }))
         filterSpent = false,
     ) {
@@ -20,9 +20,9 @@ export class TransactionController {
         return { transactions: transactions };
     }
 
-    @Get('blockHash/:blockHash')
+    @Get('hash/:hash')
     async getTransactionByBlockHash(
-        @Param('blockHash') blockHash: string,
+        @Param('hash') blockHash: string,
         @Query('filterSpent', new ParseBoolPipe({ optional: true }))
         filterSpent = false,
     ) {

@@ -13,9 +13,9 @@ import { SilentBlocksService } from '@/silent-blocks/silent-blocks.service';
 export class SilentBlocksController {
     constructor(private readonly silentBlocksService: SilentBlocksService) {}
 
-    @Get('height/:blockHeight')
+    @Get('height/:height')
     async getSilentBlockByHeight(
-        @Param('blockHeight') blockHeight: number,
+        @Param('height') blockHeight: number,
         @Res() res: Response,
         @Query('filterSpent', new ParseBoolPipe({ optional: true }))
         filterSpent = false,
@@ -32,9 +32,9 @@ export class SilentBlocksController {
         res.send(buffer);
     }
 
-    @Get('hash/:blockHash')
+    @Get('hash/:hash')
     async getSilentBlockByHash(
-        @Param('blockHash') blockHash: string,
+        @Param('hash') blockHash: string,
         @Res() res: Response,
         @Query('filterSpent', new ParseBoolPipe({ optional: true }))
         filterSpent = false,
