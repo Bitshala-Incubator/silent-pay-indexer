@@ -7,10 +7,12 @@ import { SilentBlocksGateway } from '@/silent-blocks/silent-blocks.gateway';
 import { DataSource, Repository } from 'typeorm';
 import { Transaction } from '@/transactions/transaction.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { TransactionOutput } from '@/transactions/transaction-output.entity';
 
 describe('SilentBlocksService', () => {
     let service: SilentBlocksService;
     let transactionRepository: Repository<Transaction>;
+    let transactionOutputRepository: Repository<TransactionOutput>;
     let datasource: DataSource;
 
     beforeEach(async () => {
@@ -18,12 +20,14 @@ describe('SilentBlocksService', () => {
             type: 'sqlite',
             database: ':memory:',
             dropSchema: true,
-            entities: [Transaction],
+            entities: [Transaction, TransactionOutput],
             synchronize: true,
             logging: false,
         });
         await datasource.initialize();
         transactionRepository = datasource.getRepository(Transaction);
+        transactionOutputRepository =
+            datasource.getRepository(TransactionOutput);
 
         const module: TestingModule = await Test.createTestingModule({
             imports: [CacheModule.register()],
@@ -55,6 +59,7 @@ describe('SilentBlocksService', () => {
 
             const encodedBlock = await service.getSilentBlockByHeight(
                 blockHeight,
+                false,
             );
 
             expect(encodedBlock.toString('hex')).toEqual(encodedBlockHex);
@@ -66,11 +71,41 @@ describe('SilentBlocksService', () => {
         async ({ transactions, blockHash, encodedBlockHex }) => {
             await transactionRepository.save(transactions);
 
-            const encodedBlock = await service.getSilentBlockByHash(blockHash);
+            const encodedBlock = await service.getSilentBlockByHash(
+                blockHash,
+                false,
+            );
 
             expect(encodedBlock.toString('hex')).toEqual(encodedBlockHex);
         },
     );
+
+    it('should omit spent Outputs if filterSpent is set to true', async () => {
+        // Save initial transactions to the repository
+        await transactionRepository.save(
+            silentBlockEncodingFixture[0].transactions,
+        );
+
+        // Fetch and verify non inclusion of spent outputs
+        let encodedBlock = await service.getSilentBlockByHash(
+            silentBlockEncodingFixture[0].blockHash,
+            true,
+        );
+
+        expect(encodedBlock.toString('hex')).toEqual(
+            silentBlockEncodingFixture[0].filteredOutputEncodedBlockHex,
+        );
+
+        // Mark all outputs as spent
+        await transactionOutputRepository.update({}, { isSpent: true });
+
+        encodedBlock = await service.getSilentBlockByHash(
+            silentBlockEncodingFixture[0].blockHash,
+            true,
+        );
+
+        expect(encodedBlock.toString('hex')).toEqual('0000');
+    });
 
     afterEach(async () => {
         await datasource.destroy();

@@ -1,5 +1,12 @@
-import { Controller, Get, Param, UseInterceptors } from '@nestjs/common';
 import { CacheInterceptor } from '@nestjs/cache-manager';
+import {
+    Controller,
+    Get,
+    Param,
+    ParseBoolPipe,
+    Query,
+    UseInterceptors,
+} from '@nestjs/common';
 import { TransactionsService } from '@/transactions/transactions.service';
 
 @Controller('transactions')
@@ -10,10 +17,13 @@ export class TransactionController {
     @UseInterceptors(CacheInterceptor)
     async getTransactionByBlockHeight(
         @Param('blockHeight') blockHeight: number,
+        @Query('filterSpent', new ParseBoolPipe({ optional: true }))
+        filterSpent = false,
     ) {
         const transactions =
             await this.transactionsService.getTransactionByBlockHeight(
                 blockHeight,
+                filterSpent,
             );
 
         return { transactions: transactions };
@@ -21,9 +31,16 @@ export class TransactionController {
 
     @Get('blockHash/:blockHash')
     @UseInterceptors(CacheInterceptor)
-    async getTransactionByBlockHash(@Param('blockHash') blockHash: string) {
+    async getTransactionByBlockHash(
+        @Param('blockHash') blockHash: string,
+        @Query('filterSpent', new ParseBoolPipe({ optional: true }))
+        filterSpent = false,
+    ) {
         const transactions =
-            await this.transactionsService.getTransactionByBlockHash(blockHash);
+            await this.transactionsService.getTransactionByBlockHash(
+                blockHash,
+                filterSpent,
+            );
 
         return { transactions: transactions };
     }
