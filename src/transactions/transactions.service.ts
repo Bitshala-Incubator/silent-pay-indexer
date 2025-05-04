@@ -12,12 +12,36 @@ export class TransactionsService {
 
     async getTransactionByBlockHeight(
         blockHeight: number,
+        filterSpent: boolean,
     ): Promise<Transaction[]> {
-        return this.transactionRepository.find({ where: { blockHeight } });
+        return this.transactionRepository.find({
+            where: {
+                blockHeight,
+                ...(filterSpent && {
+                    outputs: {
+                        isSpent: !filterSpent,
+                    },
+                }),
+            },
+            relations: { outputs: true },
+        });
     }
 
-    async getTransactionByBlockHash(blockHash: string): Promise<Transaction[]> {
-        return this.transactionRepository.find({ where: { blockHash } });
+    async getTransactionByBlockHash(
+        blockHash: string,
+        filterSpent: boolean,
+    ): Promise<Transaction[]> {
+        return this.transactionRepository.find({
+            where: {
+                blockHash,
+                ...(filterSpent && {
+                    outputs: {
+                        isSpent: !filterSpent,
+                    },
+                }),
+            },
+            relations: { outputs: true },
+        });
     }
 
     async saveTransaction(transaction: Transaction): Promise<Transaction> {
