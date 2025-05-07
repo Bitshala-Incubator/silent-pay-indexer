@@ -10,6 +10,8 @@ import { OperationStateModule } from '@/operation-state/operation-state.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BlockProviderModule } from '@/block-data-providers/block-provider.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
     imports: [
@@ -34,8 +36,24 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
         SilentBlocksModule,
         OperationStateModule,
         BlockProviderModule,
+        ThrottlerModule.forRootAsync({
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (configService: ConfigService) => [
+                {
+                    ttl: configService.get<number>('throttler.ttl', 1000),
+                    limit: configService.get<number>('throttler.limit', 5),
+                },
+            ],
+        }),
     ],
     controllers: [AppController],
-    providers: [AppService],
+    providers: [
+        AppService,
+        {
+            provide: APP_GUARD,
+            useClass: ThrottlerGuard,
+        },
+    ],
 })
 export class AppModule {}
