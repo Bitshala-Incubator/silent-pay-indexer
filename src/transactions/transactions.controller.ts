@@ -1,4 +1,5 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor } from '@nestjs/cache-manager';
 import { TransactionsService } from '@/transactions/transactions.service';
 
 @Controller('transactions')
@@ -6,6 +7,7 @@ export class TransactionController {
     constructor(private readonly transactionsService: TransactionsService) {}
 
     @Get('blockHeight/:blockHeight')
+    @UseInterceptors(CacheInterceptor)
     async getTransactionByBlockHeight(
         @Param('blockHeight') blockHeight: number,
     ) {
@@ -18,6 +20,7 @@ export class TransactionController {
     }
 
     @Get('blockHash/:blockHash')
+    @UseInterceptors(CacheInterceptor)
     async getTransactionByBlockHash(@Param('blockHash') blockHash: string) {
         const transactions =
             await this.transactionsService.getTransactionByBlockHash(blockHash);

@@ -1,4 +1,5 @@
-import { Controller, Get, Param, Res } from '@nestjs/common';
+import { Controller, Get, Res, Param, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor } from '@nestjs/cache-manager';
 import { Response } from 'express';
 import { SilentBlocksService } from '@/silent-blocks/silent-blocks.service';
 
@@ -7,6 +8,7 @@ export class SilentBlocksController {
     constructor(private readonly silentBlocksService: SilentBlocksService) {}
 
     @Get('height/:blockHeight')
+    @UseInterceptors(CacheInterceptor)
     async getSilentBlockByHeight(
         @Param('blockHeight') blockHeight: number,
         @Res() res: Response,
@@ -23,6 +25,7 @@ export class SilentBlocksController {
     }
 
     @Get('hash/:blockHash')
+    @UseInterceptors(CacheInterceptor)
     async getSilentBlockByHash(
         @Param('blockHash') blockHash: string,
         @Res() res: Response,

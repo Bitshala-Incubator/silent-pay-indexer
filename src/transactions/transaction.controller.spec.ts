@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { CacheModule } from '@nestjs/cache-manager';
 import { TransactionController } from '@/transactions/transactions.controller';
 import { TransactionsService } from '@/transactions/transactions.service';
 import { Transaction } from '@/transactions/transaction.entity';
@@ -61,6 +62,7 @@ describe('TransactionController', () => {
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
+            imports: [CacheModule.register()],
             controllers: [TransactionController],
             providers: [
                 TransactionsService,

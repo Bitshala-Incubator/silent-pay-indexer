@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { CacheModule } from '@nestjs/cache-manager';
 import { TransactionsService } from '@/transactions/transactions.service';
 import { SilentBlocksService } from '@/silent-blocks/silent-blocks.service';
 import { silentBlockEncodingFixture } from '@/silent-blocks/silent-blocks.service.fixtures';
@@ -25,6 +26,7 @@ describe('SilentBlocksService', () => {
         transactionRepository = datasource.getRepository(Transaction);
 
         const module: TestingModule = await Test.createTestingModule({
+            imports: [CacheModule.register()],
             providers: [
                 SilentBlocksService,
                 TransactionsService,
