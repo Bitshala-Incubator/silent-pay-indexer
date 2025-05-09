@@ -1,26 +1,36 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, ParseBoolPipe, Query } from '@nestjs/common';
 import { TransactionsService } from '@/transactions/transactions.service';
 
 @Controller('transactions')
 export class TransactionController {
     constructor(private readonly transactionsService: TransactionsService) {}
 
-    @Get('blockHeight/:blockHeight')
+    @Get('height/:height')
     async getTransactionByBlockHeight(
-        @Param('blockHeight') blockHeight: number,
+        @Param('height') blockHeight: number,
+        @Query('filterSpent', new ParseBoolPipe({ optional: true }))
+        filterSpent = false,
     ) {
         const transactions =
             await this.transactionsService.getTransactionByBlockHeight(
                 blockHeight,
+                filterSpent,
             );
 
         return { transactions: transactions };
     }
 
-    @Get('blockHash/:blockHash')
-    async getTransactionByBlockHash(@Param('blockHash') blockHash: string) {
+    @Get('hash/:hash')
+    async getTransactionByBlockHash(
+        @Param('hash') blockHash: string,
+        @Query('filterSpent', new ParseBoolPipe({ optional: true }))
+        filterSpent = false,
+    ) {
         const transactions =
-            await this.transactionsService.getTransactionByBlockHash(blockHash);
+            await this.transactionsService.getTransactionByBlockHash(
+                blockHash,
+                filterSpent,
+            );
 
         return { transactions: transactions };
     }

@@ -1,4 +1,11 @@
-import { Controller, Get, Param, Res } from '@nestjs/common';
+import {
+    Controller,
+    Get,
+    Param,
+    ParseBoolPipe,
+    Query,
+    Res,
+} from '@nestjs/common';
 import { Response } from 'express';
 import { SilentBlocksService } from '@/silent-blocks/silent-blocks.service';
 
@@ -6,13 +13,16 @@ import { SilentBlocksService } from '@/silent-blocks/silent-blocks.service';
 export class SilentBlocksController {
     constructor(private readonly silentBlocksService: SilentBlocksService) {}
 
-    @Get('height/:blockHeight')
+    @Get('height/:height')
     async getSilentBlockByHeight(
-        @Param('blockHeight') blockHeight: number,
+        @Param('height') blockHeight: number,
         @Res() res: Response,
+        @Query('filterSpent', new ParseBoolPipe({ optional: true }))
+        filterSpent = false,
     ) {
         const buffer = await this.silentBlocksService.getSilentBlockByHeight(
             blockHeight,
+            filterSpent,
         );
 
         res.set({
@@ -22,13 +32,16 @@ export class SilentBlocksController {
         res.send(buffer);
     }
 
-    @Get('hash/:blockHash')
+    @Get('hash/:hash')
     async getSilentBlockByHash(
-        @Param('blockHash') blockHash: string,
+        @Param('hash') blockHash: string,
         @Res() res: Response,
+        @Query('filterSpent', new ParseBoolPipe({ optional: true }))
+        filterSpent = false,
     ) {
         const buffer = await this.silentBlocksService.getSilentBlockByHash(
             blockHash,
+            filterSpent,
         );
 
         res.set({

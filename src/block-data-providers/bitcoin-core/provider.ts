@@ -136,6 +136,8 @@ export class BitcoinCoreProvider
                 );
 
                 await this.dbTransactionService.execute(async (manager) => {
+                    const spentOutpoints: [string, number][] = [];
+
                     for (const transaction of transactions) {
                         const { txid, vin, vout, blockHeight, blockHash } =
                             transaction;
@@ -147,7 +149,18 @@ export class BitcoinCoreProvider
                             blockHash,
                             manager,
                         );
+
+                        for (const input of vin) {
+                            spentOutpoints.push([input.txid, input.vout]);
+                        }
                     }
+
+                    await manager.query(
+                        `UPDATE transaction_output SET isSpent = true WHERE (transactionId, vout) IN (${spentOutpoints
+                            .map(() => '(?,?)')
+                            .join(',')})`,
+                        spentOutpoints.flat(),
+                    );
 
                     state.indexedBlockHeight = height;
                     await this.setState(

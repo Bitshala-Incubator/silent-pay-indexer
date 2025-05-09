@@ -19,7 +19,11 @@
     "noFallthroughCasesInSwitch": false,
     "paths": {
       "@/*": ["src/*"],
-      "@e2e/*": ["e2e/*"]
+      "@e2e/*": ["e2e/*"],
+      "@migrations/*": ["migrations/*"]
     }
+  },
+  "ts-node": {
+    "require": ["tsconfig-paths/register"]
   }
 }

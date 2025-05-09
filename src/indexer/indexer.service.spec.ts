@@ -4,6 +4,7 @@ import { IndexerService } from '@/indexer/indexer.service';
 import { testData } from '@/indexer/indexer.fixture';
 import { DataSource } from 'typeorm';
 import { DbTransactionService } from '@/db-transaction/db-transaction.service';
+import { TransactionOutput } from '@/transactions/transaction-output.entity';
 
 describe('IndexerService', () => {
     let service: IndexerService;
@@ -15,7 +16,7 @@ describe('IndexerService', () => {
             type: 'sqlite',
             database: ':memory:',
             dropSchema: true,
-            entities: [Transaction],
+            entities: [Transaction, TransactionOutput],
             synchronize: true,
             logging: false,
         });
