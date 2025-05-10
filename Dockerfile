@@ -3,6 +3,14 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+# Install build dependencies using apk
+RUN apk add --no-cache \
+    python3 \
+    py3-setuptools \
+    make \
+    g++ \
+    build-base
+
 # Copy package.json and package-lock.json for efficient layer caching
 COPY package*.json ./
 
@@ -20,13 +28,20 @@ FROM node:22-alpine AS production
 
 WORKDIR /app
 
-#Copy the compiled application from the build stage
+# Copy the compiled application from the build stage
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/migrations ./migrations
 
-#Copy package.json and install only production dependencies
+# Copy package.json and install only production dependencies
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN apk add --no-cache \
+    python3 \
+    py3-setuptools \
+    make \
+    g++ \
+    build-base && \
+    npm install --omit=dev && \
+    apk del python3 py3-setuptools make g++ build-base
 
 # Set environment variables for SQLite path and app port
 ENV DB_PATH="/app/data/database.sqlite"

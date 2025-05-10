@@ -16,3 +16,6 @@ bitcoinCore:
   rpcPass: password
   rpcUser: polaruser
   rpcPort: 18443
+throttler:
+  ttl: 1000
+  limit: 5
