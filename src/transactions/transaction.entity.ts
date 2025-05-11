@@ -3,13 +3,13 @@ import { Column, Entity, OneToMany, PrimaryColumn, Relation } from 'typeorm';
 
 @Entity()
 export class Transaction {
-    @PrimaryColumn('text')
+    @PrimaryColumn({ type: 'varchar', length: 64 }) // 32 bytes * 2 [HEX]
     id: string; // txid
 
     @Column({ type: 'integer', nullable: false })
     blockHeight: number;
 
-    @Column({ type: 'text', nullable: false })
+    @Column({ type: 'varchar', length: 64 }) // 32 bytes * 2 [HEX]
     blockHash: string;
 
     @Column({ type: 'text', nullable: false })

@@ -5,6 +5,6 @@ export class BlockState {
     @PrimaryColumn('integer')
     blockHeight: number;
 
-    @Column('text')
+    @Column({ type: 'varchar', length: 64 }) // 32 bytes * 2 [HEX]
     blockHash: string;
 }

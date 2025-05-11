@@ -5,10 +5,10 @@ export class Migrations1730970511232 implements MigrationInterface {
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(
-            `CREATE TABLE "transaction" ("id" text PRIMARY KEY NOT NULL, "blockHeight" integer NOT NULL, "blockHash" text NOT NULL, "scanTweak" text NOT NULL)`,
+            `CREATE TABLE "transaction" ("id" varchar(64) PRIMARY KEY NOT NULL, "blockHeight" integer NOT NULL, "blockHash" varchar(64) NOT NULL, "scanTweak" text NOT NULL)`,
         );
         await queryRunner.query(
-            `CREATE TABLE "block_state" ("blockHeight" integer PRIMARY KEY NOT NULL, "blockHash" text NOT NULL)`,
+            `CREATE TABLE "block_state" ("blockHeight" integer PRIMARY KEY NOT NULL, "blockHash" varchar(64) NOT NULL)`,
         );
         await queryRunner.query(
             `CREATE TABLE "operation_state" ("id" text PRIMARY KEY NOT NULL, "state" text NOT NULL)`,
