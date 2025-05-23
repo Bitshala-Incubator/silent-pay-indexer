@@ -47,6 +47,13 @@ export class IndexerService {
         }
     }
 
+    async indexAll(
+        transactions: Transaction[],
+        manager: EntityManager,
+    ): Promise<void> {
+        await manager.save(Transaction, transactions);
+    }
+
     public deriveOutputsAndComputeScanTweak(
         vin: TransactionInput[],
         vout: TransactionOutput[],

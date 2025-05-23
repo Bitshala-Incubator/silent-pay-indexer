@@ -135,25 +135,25 @@ export class BitcoinCoreProvider
                     verbosityLevel,
                 );
 
-                await this.dbTransactionService.execute(async (manager) => {
-                    const spentOutpoints: [string, number][] = [];
-
-                    for (const transaction of transactions) {
-                        const { txid, vin, vout, blockHeight, blockHash } =
-                            transaction;
-                        await this.indexTransaction(
+                const spentOutpoints: [string, number][] = [];
+                const domainTxns = transactions.flatMap(
+                    ({ txid, vin, vout, blockHeight, blockHash }) => {
+                        vin.forEach(({ txid: inTxid, vout: inVout }) =>
+                            spentOutpoints.push([inTxid, inVout]),
+                        );
+                        const tx = this.getDomainTransaction(
                             txid,
                             vin,
                             vout,
                             blockHeight,
                             blockHash,
-                            manager,
                         );
+                        return tx ? [tx] : [];
+                    },
+                );
 
-                        for (const input of vin) {
-                            spentOutpoints.push([input.txid, input.vout]);
-                        }
-                    }
+                await this.dbTransactionService.execute(async (manager) => {
+                    await this.indexAllTransactions(domainTxns, manager);
 
                     await manager.query(
                         `UPDATE transaction_output SET isSpent = true WHERE (transactionId, vout) IN (${spentOutpoints
