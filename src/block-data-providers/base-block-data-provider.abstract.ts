@@ -11,6 +11,7 @@ import { BlockStateService } from '@/block-state/block-state.service';
 import { BlockState } from '@/block-state/block-state.entity';
 import { EntityManager } from 'typeorm';
 import { OperationState } from '@/operation-state/operation-state.entity';
+import { Transaction } from '@/transactions/transaction.entity';
 
 export abstract class BaseBlockDataProvider<OperationState> {
     protected readonly eventEmitter: EventEmitter2 = new EventEmitter2();
@@ -40,6 +41,38 @@ export abstract class BaseBlockDataProvider<OperationState> {
             blockHash,
             manager,
         );
+    }
+
+    async indexAllTransactions(
+        transactions: Transaction[],
+        manager: EntityManager,
+    ): Promise<void> {
+        await this.indexerService.indexAll(transactions, manager);
+    }
+
+    protected getDomainTransaction(
+        txid: string,
+        vin: TransactionInput[],
+        vout: TransactionOutput[],
+        blockHeight: number,
+        blockHash: string,
+    ): Transaction | null {
+        const scanResult = this.indexerService.deriveOutputsAndComputeScanTweak(
+            vin,
+            vout,
+        );
+        if (!scanResult) return null;
+
+        const { scanTweak, eligibleOutputs: outputs } = scanResult;
+
+        const transaction = new Transaction();
+        transaction.id = txid;
+        transaction.blockHeight = blockHeight;
+        transaction.blockHash = blockHash;
+        transaction.scanTweak = scanTweak.toString('hex');
+        transaction.outputs = outputs;
+
+        return transaction;
     }
 
     async getState(): Promise<OperationState> {
