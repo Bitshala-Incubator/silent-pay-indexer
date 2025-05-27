@@ -18,9 +18,13 @@ import { APP_GUARD } from '@nestjs/core';
     imports: [
         ScheduleModule.forRoot(),
         EventEmitterModule.forRoot(),
-        CacheModule.register({
-            ttl: 5000,
+        CacheModule.registerAsync({
             isGlobal: true,
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (configService: ConfigService) => ({
+                ttl: configService.get<number>('cache.ttl', 5000),
+            }),
         }),
         ConfigModule.forRoot({
             ignoreEnvFile: true,

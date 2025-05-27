@@ -19,3 +19,5 @@ bitcoinCore:
 throttler:
   ttl: 1000
   limit: 5
+cache:
+  ttl: 5000 # 5 sec
