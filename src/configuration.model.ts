@@ -95,6 +95,12 @@ export class BitcoinCoreConfig {
     rpcPort: number;
 }
 
+class CacheConfig {
+    @IsInt()
+    @Min(1000)
+    ttl: number;
+}
+
 export class Config {
     @IsDefined()
     @ValidateNested()
@@ -120,4 +126,9 @@ export class Config {
     @ValidateNested()
     @Type(() => BitcoinCoreConfig)
     bitcoinCore: BitcoinCoreConfig;
+
+    @IsDefined()
+    @ValidateNested()
+    @Type(() => CacheConfig)
+    cache: CacheConfig;
 }
