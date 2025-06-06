@@ -11,6 +11,7 @@ import { BlockStateService } from '@/block-state/block-state.service';
 import { BlockState } from '@/block-state/block-state.entity';
 import { EntityManager } from 'typeorm';
 import { OperationState } from '@/operation-state/operation-state.entity';
+import { Transaction } from '@/block-data-providers/bitcoin-core/interfaces';
 
 export abstract class BaseBlockDataProvider<OperationState> {
     protected readonly eventEmitter: EventEmitter2 = new EventEmitter2();
@@ -40,6 +41,13 @@ export abstract class BaseBlockDataProvider<OperationState> {
             blockHash,
             manager,
         );
+    }
+
+    async indexAllTransactions(
+        transactions: Transaction[],
+        manager: EntityManager,
+    ): Promise<void> {
+        await this.indexerService.indexAll(transactions, manager);
     }
 
     async getState(): Promise<OperationState> {

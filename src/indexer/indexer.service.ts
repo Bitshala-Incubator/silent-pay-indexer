@@ -1,9 +1,10 @@
-import { Transaction } from '@/transactions/transaction.entity';
 import { TransactionOutput as TransactionOutputEntity } from '@/transactions/transaction-output.entity';
 import { createTaggedHash, extractPubKeyFromScript } from '@/common/common';
 import { publicKeyCombine, publicKeyTweakMul } from 'secp256k1';
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import { Transaction as TransactionEntity } from '@/transactions/transaction.entity';
+import { Transaction as ParsedTransaction } from '@/block-data-providers/bitcoin-core/interfaces';
 
 export type TransactionInput = {
     txid: string; // transaction id
@@ -36,15 +37,42 @@ export class IndexerService {
         const scanResult = this.deriveOutputsAndComputeScanTweak(vin, vout);
         if (scanResult !== null) {
             const { scanTweak, eligibleOutputs: outputs } = scanResult;
-            const transaction = new Transaction();
+            const transaction = new TransactionEntity();
             transaction.id = txid;
             transaction.blockHeight = blockHeight;
             transaction.blockHash = blockHash;
             transaction.scanTweak = scanTweak.toString('hex');
             transaction.outputs = outputs;
 
-            await manager.save(Transaction, transaction);
+            await manager.save(TransactionEntity, transaction);
         }
+    }
+
+    async indexAll(
+        transactions: ParsedTransaction[],
+        manager: EntityManager,
+    ): Promise<void> {
+        for (const {
+            txid,
+            vin,
+            vout,
+            blockHeight,
+            blockHash,
+        } of transactions) {
+            const scanResult = this.deriveOutputsAndComputeScanTweak(vin, vout);
+            if (!scanResult) return null;
+
+            const { scanTweak, eligibleOutputs: outputs } = scanResult;
+
+            const transaction = new TransactionEntity();
+            transaction.id = txid;
+            transaction.blockHeight = blockHeight;
+            transaction.blockHash = blockHash;
+            transaction.scanTweak = scanTweak.toString('hex');
+            transaction.outputs = outputs;
+        }
+
+        await manager.save(TransactionEntity, transactions);
     }
 
     public deriveOutputsAndComputeScanTweak(
