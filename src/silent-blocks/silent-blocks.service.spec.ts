@@ -8,6 +8,7 @@ import { DataSource, Repository } from 'typeorm';
 import { Transaction } from '@/transactions/transaction.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { TransactionOutput } from '@/transactions/transaction-output.entity';
+import { BlockStateService } from '@/block-state/block-state.service';
 
 describe('SilentBlocksService', () => {
     let service: SilentBlocksService;
@@ -41,6 +42,12 @@ describe('SilentBlocksService', () => {
                 {
                     provide: SilentBlocksGateway,
                     useValue: jest.fn(),
+                },
+                {
+                    provide: BlockStateService,
+                    useValue: {
+                        getCurrentBlockState: jest.fn(),
+                    },
                 },
             ],
         }).compile();

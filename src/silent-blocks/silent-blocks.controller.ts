@@ -54,4 +54,12 @@ export class SilentBlocksController {
         });
         res.send(buffer);
     }
+
+    @Get('latest-height')
+    @UseInterceptors(CacheInterceptor)
+    async getLatestIndexedBlockHeight() {
+        const height =
+            await this.silentBlocksService.getLatestIndexedBlockHeight();
+        return { height };
+    }
 }

@@ -6,6 +6,7 @@ import { encodeVarInt, varIntSize } from '@/common/common';
 import { SilentBlocksGateway } from '@/silent-blocks/silent-blocks.gateway';
 import { OnEvent } from '@nestjs/event-emitter';
 import { INDEXED_BLOCK_EVENT } from '@/common/events';
+import { BlockStateService } from '@/block-state/block-state.service';
 
 @Injectable()
 export class SilentBlocksService {
@@ -14,6 +15,7 @@ export class SilentBlocksService {
     constructor(
         private readonly transactionsService: TransactionsService,
         private readonly silentBlocksGateway: SilentBlocksGateway,
+        private readonly blockStateService: BlockStateService,
     ) {}
 
     @OnEvent(INDEXED_BLOCK_EVENT)
@@ -84,5 +86,11 @@ export class SilentBlocksService {
             );
 
         return this.encodeSilentBlock(transactions);
+    }
+
+    async getLatestIndexedBlockHeight(): Promise<number> {
+        const currentBlockState =
+            await this.blockStateService.getCurrentBlockState();
+        return currentBlockState?.blockHeight ?? 0;
     }
 }

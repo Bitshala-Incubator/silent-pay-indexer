@@ -60,6 +60,7 @@ describe('Indexer', () => {
             const silentBlock = new SilentBlocksService(
                 {} as any,
                 {} as any,
+                {} as any,
             ).encodeSilentBlock([transformedTransaction]);
 
             // remove this once Web Socket is implemented
@@ -121,6 +122,7 @@ describe('Indexer', () => {
         );
 
         const silentBlock = new SilentBlocksService(
+            {} as any,
             {} as any,
             {} as any,
         ).encodeSilentBlock([]);
