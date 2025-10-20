@@ -155,9 +155,9 @@ export const varIntSize = (value: number): number => {
 export const btcToSats = (amount: number): number => {
     const btcString = amount.toFixed(8); // assert 8 decimal places
     const [whole, decimal] = btcString.split('.');
-    
+
     // combine whole and decimal parts, treating as satoshis
     const satoshiString = whole + decimal;
-    
+
     return parseInt(satoshiString, 10);
 };

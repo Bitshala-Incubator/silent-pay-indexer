@@ -4,7 +4,6 @@ import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { BitcoinNetwork } from '@/common/enum';
 import {
     BITCOIN_CORE_FULL_VERBOSITY_VERSION,
-    SATS_PER_BTC,
     TAPROOT_ACTIVATION_HEIGHT,
 } from '@/common/constants';
 import { Cron, CronExpression } from '@nestjs/schedule';
