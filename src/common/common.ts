@@ -147,3 +147,17 @@ export const varIntSize = (value: number): number => {
     else if (value <= 0xffffffff) return 5;
     else return 9;
 };
+
+/**
+ * Converts BTC amount to satoshis using string manipulation to avoid floating-point errors.
+ * Bitcoin amounts have max 8 decimal places, 1 BTC = 100,000,000 satoshis.
+ */
+export const btcToSats = (amount: number): number => {
+    const btcString = amount.toFixed(8); // assert 8 decimal places
+    const [whole, decimal] = btcString.split('.');
+    
+    // combine whole and decimal parts, treating as satoshis
+    const satoshiString = whole + decimal;
+    
+    return parseInt(satoshiString, 10);
+};

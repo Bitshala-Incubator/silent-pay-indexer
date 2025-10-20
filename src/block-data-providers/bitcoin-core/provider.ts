@@ -26,9 +26,9 @@ import {
     NetworkInfo,
 } from '@/block-data-providers/bitcoin-core/interfaces';
 import { AxiosRequestConfig } from 'axios';
-import * as currency from 'currency.js';
 import { AxiosRetryConfig, makeRequest } from '@/common/request';
 import { BlockStateService } from '@/block-state/block-state.service';
+import { btcToSats } from '@/common/common';
 import { DbTransactionService } from '@/db-transaction/db-transaction.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { INDEXED_BLOCK_EVENT } from '@/common/events';
@@ -294,7 +294,7 @@ export class BitcoinCoreProvider
     private parseTransactionOutput(txnOutput: Output): TransactionOutput {
         return {
             scriptPubKey: txnOutput.scriptPubKey.hex,
-            value: this.convertToSatoshi(txnOutput.value),
+            value: btcToSats(txnOutput.value),
         };
     }
 
@@ -323,10 +323,6 @@ export class BitcoinCoreProvider
         );
 
         return response.result;
-    }
-
-    private convertToSatoshi(amount: number): number {
-        return currency(amount, { precision: 8 }).multiply(SATS_PER_BTC).value;
     }
 
     private versionToVerbosity(version: number): 2 | 3 {
