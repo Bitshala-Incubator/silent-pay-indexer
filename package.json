@@ -44,7 +44,6 @@
     "@nestjs/typeorm": "^10.0.2",
     "@nestjs/websockets": "^10.3.7",
     "axios": "^1.7.2",
-    "currency.js": "^2.0.4",
     "js-yaml": "^4.1.0",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.2.0",

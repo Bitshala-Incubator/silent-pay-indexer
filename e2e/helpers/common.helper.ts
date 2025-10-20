@@ -1,8 +1,6 @@
 import { Payment, Transaction } from 'bitcoinjs-lib';
 import { IndexerService } from '@/indexer/indexer.service';
 import { Transaction as TransactionEntity } from '@/transactions/transaction.entity';
-import { SATS_PER_BTC } from '@/common/constants';
-import * as currency from 'currency.js';
 import { TransactionOutput } from '@/transactions/transaction-output.entity';
 
 export function generateScanTweakAndOutputEntity(
@@ -68,7 +66,3 @@ export interface SilentBlockTransaction {
     }[];
     scanTweak: string;
 }
-
-export const btcToSats = (amount: number): number => {
-    return currency(amount, { precision: 8 }).multiply(SATS_PER_BTC).value;
-};
