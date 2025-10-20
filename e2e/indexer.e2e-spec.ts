@@ -1,5 +1,6 @@
 import { UTXO, WalletHelper, AddressType } from '@e2e/helpers/wallet.helper';
-import { btcToSats, transactionToEntity } from '@e2e/helpers/common.helper';
+import { transactionToEntity } from '@e2e/helpers/common.helper';
+import { btcToSats } from '@/common/common';
 import { initialiseDep } from '@e2e/setup';
 import { ApiHelper } from '@e2e/helpers/api.helper';
 import { SilentBlocksService } from '@/silent-blocks/silent-blocks.service';

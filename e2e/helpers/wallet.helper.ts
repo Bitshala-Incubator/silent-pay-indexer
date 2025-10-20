@@ -9,7 +9,7 @@ import {
     Transaction,
     crypto,
 } from 'bitcoinjs-lib';
-import { btcToSats } from '@e2e/helpers/common.helper';
+import { btcToSats } from '@/common/common';
 import { randomBytes } from 'crypto';
 import { toXOnly } from 'bitcoinjs-lib/src/psbt/bip371';
 import { BitcoinRPCUtil } from '@e2e/helpers/rpc.helper';
