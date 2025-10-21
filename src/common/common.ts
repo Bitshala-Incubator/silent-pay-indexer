@@ -1,6 +1,7 @@
 import { createHash } from 'crypto';
 import { publicKeyVerify } from 'secp256k1';
-import { NUMS_H } from '@/common/constants';
+import { NUMS_H, SATS_PER_BTC } from '@/common/constants';
+import * as currency from 'currency.js';
 
 export const camelToSnakeCase = (inputString: string) => {
     return inputString
@@ -146,4 +147,10 @@ export const varIntSize = (value: number): number => {
     else if (value <= 0xffff) return 3;
     else if (value <= 0xffffffff) return 5;
     else return 9;
+};
+
+export const btcToSats = (amount: number): number => {
+    return currency(currency(amount, { precision: 8 }).multiply(SATS_PER_BTC), {
+        precision: 0,
+    }).value;
 };

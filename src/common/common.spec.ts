@@ -1,4 +1,4 @@
-import { extractPubKeyFromScript } from '@/common/common';
+import { btcToSats, extractPubKeyFromScript } from '@/common/common';
 
 describe('Common', () => {
     it.each([
@@ -180,6 +180,36 @@ describe('Common', () => {
 
             if (expected === null) expect(pubKey).toBeNull();
             else expect(pubKey.toString('hex')).toEqual(expected);
+        },
+    );
+
+    it.each([
+        {
+            btc: 4388.71102316,
+            sats: 438871102316,
+            description: 'problematic floating-point amount',
+        },
+        { btc: 0.00000001, sats: 1, description: 'minimum amount (1 satoshi)' },
+        { btc: 1, sats: 100000000, description: '1 BTC' },
+        { btc: 0.5, sats: 50000000, description: 'half BTC' },
+        { btc: 0, sats: 0, description: 'zero BTC' },
+        { btc: 21000000, sats: 2100000000000000, description: 'maximum BTC' },
+        { btc: 0.12345678, sats: 12345678, description: 'typical amount' },
+        { btc: 0.00012345, sats: 12345, description: 'small amount' },
+        {
+            btc: 12345.67890123,
+            sats: 1234567890123,
+            description: 'large amount',
+        },
+        {
+            btc: 20999999.99999999,
+            sats: 2099999999999999,
+            description: 'just below maximum BTC',
+        },
+    ])(
+        'should convert $btc BTC to $sats satoshis: $description',
+        ({ btc, sats }) => {
+            expect(btcToSats(btc)).toBe(sats);
         },
     );
 });
