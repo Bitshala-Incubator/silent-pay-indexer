@@ -1,8 +1,9 @@
 import { UTXO, WalletHelper, AddressType } from '@e2e/helpers/wallet.helper';
-import { btcToSats, transactionToEntity } from '@e2e/helpers/common.helper';
+import { transactionToEntity } from '@e2e/helpers/common.helper';
 import { initialiseDep } from '@e2e/setup';
 import { ApiHelper } from '@e2e/helpers/api.helper';
 import { SilentBlocksService } from '@/silent-blocks/silent-blocks.service';
+import { btcToSats } from '@/common/common';
 
 describe('Indexer', () => {
     let apiHelper: ApiHelper;

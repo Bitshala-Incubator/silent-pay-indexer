@@ -9,13 +9,13 @@ import {
     Transaction,
     crypto,
 } from 'bitcoinjs-lib';
-import { btcToSats } from '@e2e/helpers/common.helper';
 import { randomBytes } from 'crypto';
 import { toXOnly } from 'bitcoinjs-lib/src/psbt/bip371';
 import { BitcoinRPCUtil } from '@e2e/helpers/rpc.helper';
 import { ECPairFactory } from 'ecpair';
 import { PsbtInput } from 'bip174/src/lib/interfaces';
 import { TransactionInput } from 'bitcoinjs-lib/src/psbt';
+import { btcToSats } from '@/common/common';
 
 export interface PsbtInputExtended extends PsbtInput, TransactionInput {}
 

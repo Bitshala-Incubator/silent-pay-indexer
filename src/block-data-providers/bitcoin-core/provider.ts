@@ -4,7 +4,6 @@ import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { BitcoinNetwork } from '@/common/enum';
 import {
     BITCOIN_CORE_FULL_VERBOSITY_VERSION,
-    SATS_PER_BTC,
     TAPROOT_ACTIVATION_HEIGHT,
 } from '@/common/constants';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -26,12 +25,12 @@ import {
     NetworkInfo,
 } from '@/block-data-providers/bitcoin-core/interfaces';
 import { AxiosRequestConfig } from 'axios';
-import * as currency from 'currency.js';
 import { AxiosRetryConfig, makeRequest } from '@/common/request';
 import { BlockStateService } from '@/block-state/block-state.service';
 import { DbTransactionService } from '@/db-transaction/db-transaction.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { INDEXED_BLOCK_EVENT } from '@/common/events';
+import { btcToSats } from '@/common/common';
 
 @Injectable()
 export class BitcoinCoreProvider
@@ -294,7 +293,7 @@ export class BitcoinCoreProvider
     private parseTransactionOutput(txnOutput: Output): TransactionOutput {
         return {
             scriptPubKey: txnOutput.scriptPubKey.hex,
-            value: this.convertToSatoshi(txnOutput.value),
+            value: btcToSats(txnOutput.value),
         };
     }
 
@@ -323,10 +322,6 @@ export class BitcoinCoreProvider
         );
 
         return response.result;
-    }
-
-    private convertToSatoshi(amount: number): number {
-        return currency(amount, { precision: 8 }).multiply(SATS_PER_BTC).value;
     }
 
     private versionToVerbosity(version: number): 2 | 3 {
