@@ -1,8 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '@/app.module';
 import { ConfigService } from '@nestjs/config';
-import { LogLevel } from '@nestjs/common';
 import { WsAdapter } from '@nestjs/platform-ws';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 declare const module: any;
 
@@ -13,15 +13,7 @@ async function bootstrap() {
     const configService = app.get<ConfigService>(ConfigService);
     const port = configService.get<number>('app.port');
 
-    const isVerbose = configService.get<boolean>('app.verbose') ?? false;
-    const isDebug = configService.get<boolean>('app.debug') ?? false;
-
-    const loggerLevels: LogLevel[] = ['error', 'warn', 'log'];
-
-    if (isVerbose) loggerLevels.push('verbose');
-    if (isDebug) loggerLevels.push('debug');
-
-    app.useLogger(loggerLevels);
+    app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
     await app.listen(port);
 

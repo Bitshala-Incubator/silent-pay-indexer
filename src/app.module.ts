@@ -13,6 +13,12 @@ import { OperationStateModule } from '@/operation-state/operation-state.module';
 import { BlockProviderModule } from '@/block-data-providers/block-provider.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import {
+    WinstonModule,
+    utilities as nestWinstonModuleUtilities,
+} from 'nest-winston';
+import * as winston from 'winston';
+import { WinstonModuleOptions } from 'nest-winston/dist/winston.interfaces';
 
 @Module({
     imports: [
@@ -54,6 +60,64 @@ import { APP_GUARD } from '@nestjs/core';
                     limit: configService.get<number>('throttler.limit', 5),
                 },
             ],
+        }),
+        WinstonModule.forRootAsync({
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (
+                configService: ConfigService,
+            ): WinstonModuleOptions => {
+                const isVerbose =
+                    configService.get<boolean>('app.verbose') ?? false;
+                const isDebug =
+                    configService.get<boolean>('app.debug') ?? false;
+                return {
+                    level: isVerbose ? 'verbose' : isDebug ? 'debug' : 'info',
+                    levels: {
+                        error: 0,
+                        warn: 1,
+                        info: 2,
+                        http: 3,
+                        debug: 4,
+                        verbose: 5,
+                        silly: 6,
+                    },
+                    transports: [
+                        // File transport - logs everything to log.txt
+                        new winston.transports.File({
+                            filename: 'app.log',
+                            format: winston.format.combine(
+                                winston.format.timestamp({
+                                    format: 'YYYY-MM-DD HH:mm:ss',
+                                }),
+                                winston.format.errors({ stack: true }),
+                                winston.format.printf(
+                                    ({
+                                        timestamp,
+                                        level,
+                                        context,
+                                        message,
+                                    }) => {
+                                        return `[${timestamp}] [${level.toUpperCase()}] [${
+                                            context || 'Application'
+                                        }] ${message}`;
+                                    },
+                                ),
+                            ),
+                            maxsize: 5242880, // 5MB
+                            maxFiles: 5,
+                        }),
+                        // Console transport - for development
+                        new winston.transports.Console({
+                            format: winston.format.combine(
+                                winston.format.timestamp(),
+                                winston.format.ms(),
+                                nestWinstonModuleUtilities.format.nestLike(),
+                            ),
+                        }),
+                    ],
+                };
+            },
         }),
     ],
     controllers: [AppController],
