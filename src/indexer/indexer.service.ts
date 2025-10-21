@@ -41,9 +41,15 @@ export class IndexerService {
             transaction.blockHeight = blockHeight;
             transaction.blockHash = blockHash;
             transaction.scanTweak = scanTweak.toString('hex');
-            transaction.outputs = outputs;
+
+            for (const output of outputs) {
+                output.transaction = transaction;
+            }
 
             await manager.save(Transaction, transaction);
+            await manager.save(TransactionOutputEntity, outputs, {
+                chunk: 500,
+            });
         }
     }
 
