@@ -39,6 +39,7 @@ export class BitcoinCoreProvider
 {
     protected readonly logger = new Logger(BitcoinCoreProvider.name);
     protected readonly operationStateKey = 'bitcoincore-operation-state';
+    private readonly updateQueryBatchSize = 300;
     private readonly rpcUrl: string;
     private isSyncing = false;
     private retryConfig: AxiosRetryConfig;
@@ -154,12 +155,23 @@ export class BitcoinCoreProvider
                         }
                     }
 
-                    await manager.query(
-                        `UPDATE transaction_output SET isSpent = true WHERE (transactionId, vout) IN (${spentOutpoints
-                            .map(() => '(?,?)')
-                            .join(',')})`,
-                        spentOutpoints.flat(),
-                    );
+                    for (
+                        let i = 0;
+                        i < spentOutpoints.length;
+                        i += this.updateQueryBatchSize
+                    ) {
+                        const batch = spentOutpoints.slice(
+                            i,
+                            i + this.updateQueryBatchSize,
+                        );
+
+                        await manager.query(
+                            `UPDATE transaction_output SET isSpent = true WHERE (transactionId, vout) IN (${batch
+                                .map(() => '(?,?)')
+                                .join(',')})`,
+                            batch.flat(),
+                        );
+                    }
 
                     state.indexedBlockHeight = height;
                     await this.setState(
