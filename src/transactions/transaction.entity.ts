@@ -12,6 +12,9 @@ export class Transaction {
     @Column({ type: 'varchar', length: 64 }) // 32 bytes * 2 [HEX]
     blockHash: string;
 
+    @Column({ type: 'integer', nullable: false })
+    blockTime: number;
+
     @Column({ type: 'text', nullable: false })
     scanTweak: string;
 

@@ -11,6 +11,7 @@ const mockTransactions: Transaction[] = [
         blockHeight: 841744,
         blockHash:
             '0000000000000000000162b9fbce878ab4140c6bf5ea3881f14736a266e4d98d',
+        blockTime: 1714634200,
         scanTweak:
             '024ac253c216532e961988e2a8ce266a447c894c781e52ef6cee902361db960004',
         outputs: [
@@ -29,6 +30,7 @@ const mockTransactions: Transaction[] = [
         blockHeight: 841744,
         blockHash:
             '0000000000000000000162b9fbce878ab4140c6bf5ea3881f14736a266e4d98d',
+        blockTime: 1714634200,
         scanTweak:
             '024ac253c216532e961988e2a8ce266a447c894c781e52ef6cee902361db960004',
         outputs: [
@@ -47,6 +49,7 @@ const mockTransactions: Transaction[] = [
         blockHeight: 841745,
         blockHash:
             '000000000000000000030d3be33f251ddeb5d7e480f28970064f594ba9dfb033',
+        blockTime: 1714634640,
         scanTweak:
             '024cad5180a093d3af0f49f586bdf37f890920178e68e80561ed53351d0fa499ad',
         outputs: [

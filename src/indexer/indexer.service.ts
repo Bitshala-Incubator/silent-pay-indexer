@@ -31,6 +31,7 @@ export class IndexerService {
         vout: TransactionOutput[],
         blockHeight: number,
         blockHash: string,
+        blockTime: number,
         manager: EntityManager,
     ): Promise<void> {
         const scanResult = this.deriveOutputsAndComputeScanTweak(vin, vout);
@@ -40,6 +41,7 @@ export class IndexerService {
             transaction.id = txid;
             transaction.blockHeight = blockHeight;
             transaction.blockHash = blockHash;
+            transaction.blockTime = blockTime;
             transaction.scanTweak = scanTweak.toString('hex');
 
             for (const output of outputs) {

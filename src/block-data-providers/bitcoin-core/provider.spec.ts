@@ -88,9 +88,9 @@ describe('Bitcoin Core Provider', () => {
     });
 
     it('should process each transaction of a block appropriately', async () => {
-        const result = await provider.processBlock(3, 2);
-        expect(result[0]).toHaveLength(1);
-        expect(result[0]).toEqual(
+        const { transactions } = await provider.processBlock(3, 2);
+        expect(transactions).toHaveLength(1);
+        expect(transactions).toEqual(
             expect.arrayContaining([...parsedTransactions.values()]),
         );
     });

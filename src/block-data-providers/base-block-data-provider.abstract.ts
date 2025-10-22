@@ -30,6 +30,7 @@ export abstract class BaseBlockDataProvider<OperationState> {
         vout: TransactionOutput[],
         blockHeight: number,
         blockHash: string,
+        blockTime: number,
         manager: EntityManager,
     ): Promise<void> {
         await this.indexerService.index(
@@ -38,6 +39,7 @@ export abstract class BaseBlockDataProvider<OperationState> {
             vout,
             blockHeight,
             blockHash,
+            blockTime,
             manager,
         );
     }

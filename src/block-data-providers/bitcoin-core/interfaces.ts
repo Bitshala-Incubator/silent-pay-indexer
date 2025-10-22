@@ -1,6 +1,7 @@
 import { TransactionInput, TransactionOutput } from '@/indexer/indexer.service';
 
 export interface Block {
+    time: number;
     height: number;
     hash: string;
     tx: BlockTransaction[];

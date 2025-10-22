@@ -6,6 +6,7 @@ export const silentBlockEncodingFixture = [
                 blockHeight: 859678,
                 blockHash:
                     '00000000000000000002c522880d92339d4c20ad071c0a587d6167a5f9d2a219',
+                blockTime: 1725353138,
                 scanTweak:
                     '0381a4ef11a26108cf10d8c33305b77aec009beed82a77bb47b716a04ae9ae5bf1',
                 outputs: [
@@ -24,6 +25,7 @@ export const silentBlockEncodingFixture = [
                     '00000000000000000002c522880d92339d4c20ad071c0a587d6167a5f9d2a219',
                 scanTweak:
                     '03d87550a4ba8ed7dd37df7739a021d6d212e70e8a8e6e9e70249c13a11fd9f412',
+                blockTime: 1725353138,
                 outputs: [
                     {
                         pubKey: '5af9436eb515871413a913f24290ba003eab7a64b9c62cb72051599a383de8ff',

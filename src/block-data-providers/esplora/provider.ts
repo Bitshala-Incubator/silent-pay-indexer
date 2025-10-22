@@ -182,6 +182,7 @@ export class EsploraProvider
                                 vout,
                                 height,
                                 hash,
+                                tx.status.block_time,
                                 manager,
                             );
                         }, this),
