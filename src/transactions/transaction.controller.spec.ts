@@ -128,4 +128,29 @@ describe('TransactionController', () => {
             transactions: mockTransactions,
         });
     });
+
+    it('should return transactions by block height range', async () => {
+        const getTransactionsByBlockHeightRangeSpy = jest.spyOn(
+            transactionsService,
+            'getTransactionsByBlockHeightRange',
+        );
+
+        const startHeight = 841744;
+        const endHeight = 841745;
+
+        const controllerResult =
+            await controller.getTransactionsByBlockHeightRange(
+                startHeight,
+                endHeight,
+            );
+
+        expect(getTransactionsByBlockHeightRangeSpy).toHaveBeenCalledWith(
+            startHeight,
+            endHeight,
+            false,
+        );
+        expect(controllerResult).toEqual({
+            transactions: mockTransactions,
+        });
+    });
 });

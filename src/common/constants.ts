@@ -10,3 +10,5 @@ export const SATS_PER_BTC = 100_000_000;
 export const BITCOIN_CORE_FULL_VERBOSITY_VERSION = 23_0000;
 
 export const SILENT_PAYMENT_BLOCK_TYPE = 0x00;
+
+export const MAX_BLOCK_RANGE = 50;
