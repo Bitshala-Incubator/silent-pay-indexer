@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getDataSourceToken } from '@nestjs/typeorm';
 import { DataSource, QueryRunner } from 'typeorm';
 import { DbTransactionService } from '@/db-transaction/db-transaction.service';
 import { MockDataSource } from '@/db-transaction/db-transaction.mock';
@@ -13,14 +12,14 @@ describe('DbTransactionService', () => {
             providers: [
                 DbTransactionService,
                 {
-                    provide: getDataSourceToken('default'),
+                    provide: DataSource,
                     useClass: MockDataSource,
                 },
             ],
         }).compile();
         service = module.get<DbTransactionService>(DbTransactionService);
         mockQueryRunner = module
-            .get<DataSource>(getDataSourceToken('default'))
+            .get<DataSource>(DataSource)
             .createQueryRunner();
     });
 
