@@ -3,7 +3,7 @@ export const NUMS_H = Buffer.from(
     'hex',
 );
 
-export const TAPROOT_ACTIVATION_HEIGHT = 709632;
+export const BIP352_ACTIVATION_HEIGHT = 842579; // 8 May, 2024 - when BIP-352 was merged
 
 export const SATS_PER_BTC = 100_000_000;
 

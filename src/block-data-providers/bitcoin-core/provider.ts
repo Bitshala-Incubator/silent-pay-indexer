@@ -4,7 +4,7 @@ import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { BitcoinNetwork } from '@/common/enum';
 import {
     BITCOIN_CORE_FULL_VERBOSITY_VERSION,
-    TAPROOT_ACTIVATION_HEIGHT,
+    BIP352_ACTIVATION_HEIGHT,
 } from '@/common/constants';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import {
@@ -82,7 +82,7 @@ export class BitcoinCoreProvider
             const blockHeight =
                 this.configService.get<BitcoinNetwork>('app.network') ===
                 BitcoinNetwork.MAINNET
-                    ? TAPROOT_ACTIVATION_HEIGHT - 1
+                    ? BIP352_ACTIVATION_HEIGHT - 1
                     : 0;
             const blockHash = await this.getBlockHash(blockHeight);
 
