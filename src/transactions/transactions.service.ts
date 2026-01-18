@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Transaction } from '@/transactions/transaction.entity';
-import { DeleteResult, Repository } from 'typeorm';
+import { DeleteResult, Repository, Between } from 'typeorm';
 
 @Injectable()
 export class TransactionsService {
@@ -24,6 +24,27 @@ export class TransactionsService {
                 }),
             },
             relations: { outputs: true },
+        });
+    }
+
+    async getTransactionsByBlockHeightRange(
+        startHeight: number,
+        endHeight: number,
+        filterSpent: boolean,
+    ): Promise<Transaction[]> {
+        return this.transactionRepository.find({
+            where: {
+                blockHeight: Between(startHeight, endHeight),
+                ...(filterSpent && {
+                    outputs: {
+                        isSpent: !filterSpent,
+                    },
+                }),
+            },
+            relations: { outputs: true },
+            order: {
+                blockHeight: 'ASC',
+            },
         });
     }
 
