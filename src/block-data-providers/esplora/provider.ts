@@ -10,7 +10,7 @@ import {
     EsploraOperationState,
     EsploraTransaction,
 } from '@/block-data-providers/esplora/interface';
-import { TAPROOT_ACTIVATION_HEIGHT } from '@/common/constants';
+import { BIP352_ACTIVATION_HEIGHT } from '@/common/constants';
 import { BlockStateService } from '@/block-state/block-state.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { DbTransactionService } from '@/db-transaction/db-transaction.service';
@@ -80,7 +80,7 @@ export class EsploraProvider
             const blockHeight =
                 this.configService.get<BitcoinNetwork>('app.network') ===
                 BitcoinNetwork.MAINNET
-                    ? TAPROOT_ACTIVATION_HEIGHT - 1
+                    ? BIP352_ACTIVATION_HEIGHT - 1
                     : 0;
             const blockHash = await this.getBlockHash(blockHeight);
 
