@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Transaction } from '@/transactions/transaction.entity';
 import { DeleteResult, Repository, Between } from 'typeorm';
@@ -73,5 +73,24 @@ export class TransactionsService {
         blockHash: string,
     ): Promise<DeleteResult> {
         return this.transactionRepository.delete({ blockHash });
+    }
+
+    async getBlockHeightByTimestamp(
+        timestamp: number,
+    ): Promise<{ blockHeight: number }> {
+        const transaction = await this.transactionRepository
+            .createQueryBuilder('transaction')
+            .select('transaction.blockHeight', 'blockHeight')
+            .where('transaction.blockTime > :timestamp', { timestamp })
+            .orderBy('transaction.blockTime', 'ASC')
+            .getRawOne<{ blockHeight: number }>();
+
+        if (!transaction) {
+            throw new NotFoundException(
+                'No block found after the given timestamp',
+            );
+        }
+
+        return transaction;
     }
 }

@@ -81,4 +81,14 @@ export class TransactionController {
 
         return { transactions: transactions };
     }
+
+    @Get('timestamp-to-height')
+    @UseInterceptors(CacheInterceptor)
+    async getBlockHeightByTimestamp(
+        @Query('timestamp', ParseIntPipe) timestamp: number,
+    ) {
+        return await this.transactionsService.getBlockHeightByTimestamp(
+            timestamp,
+        );
+    }
 }
