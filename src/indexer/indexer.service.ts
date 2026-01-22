@@ -102,7 +102,18 @@ export class IndexerService {
         if (pubKeys.length === 0) return null;
 
         const smallestOutpoint = this.getSmallestOutpoint(vin);
-        const sumOfPublicKeys = Buffer.from(publicKeyCombine(pubKeys, true));
+
+        let sumOfPublicKeys: Buffer;
+        try {
+            sumOfPublicKeys = Buffer.from(publicKeyCombine(pubKeys, true));
+        } catch (error) {
+            // if sumOfPublicKeys is the point at infinity(not valid), skip the transaction
+            // https://github.com/bitcoin/bips/blob/master/bip-0352.mediawiki#scanning
+            if (error.message === 'The sum of the public keys is not valid') {
+                return null;
+            }
+            throw error;
+        }
 
         const inputHash = createTaggedHash(
             'BIP0352/Inputs',
