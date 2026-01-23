@@ -924,4 +924,41 @@ export const testData = [
             },
         ],
     },
+    {
+        txid: '06f45e73ee458a47750bb98039109ab991ecf584cb68f1ca7d3feddd93168c16',
+        scanTweak: null,
+        vin: [
+            {
+                txid: '49a67f0bf1ac796a9bcb40763cc9002571a419650caf81b6ad1bcf74ba1f4b03',
+                vout: 0,
+                prevOutScript:
+                    '51200a247952c463cd68c3f176fe3778c2fa86cf1ef9ad75d3580e162256eaf18763',
+                scriptSig: '',
+                witness: [
+                    '82d496b10b56cfa099e6c9e34708168480bf94ee93ca8e8db2675d6a099faa3398bd0abc530622e8f6811b6e1f5f77e2f865dc2c465c1419e13181558cf0609e',
+                ],
+            },
+            {
+                txid: '89b7cf039d03727c926384f23f07603319d683a273bb3e1f98711cf349c35fea',
+                vout: 3,
+                prevOutScript: '00143be8f170d811913eb8996d7a48eb66326dec28bf',
+                scriptSig: '',
+                witness: [
+                    '3045022100d56b80a582443413a7017bd2f3be267bfa19a4a3f54e16e500811431e16457550220534d37f01111473f273a10fbe1e1c785ccebd4b2a85a255df60ccd9ce550248701',
+                    '030a247952c463cd68c3f176fe3778c2fa86cf1ef9ad75d3580e162256eaf18763',
+                ],
+            },
+        ],
+        vout: [
+            {
+                value: 546,
+                scriptPubKey:
+                    '512050d20841184433667bcf20c9ef833f2663dea38910914a7e336db497c4a82cd2',
+            },
+            {
+                value: 2971,
+                scriptPubKey: '00143be8f170d811913eb8996d7a48eb66326dec28bf',
+            },
+        ],
+    },
 ];
