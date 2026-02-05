@@ -54,9 +54,11 @@ Read more about silent payments in [BIP 352](https://github.com/bitcoin/bips/pul
   $ npm install
 ```
 
+> **Note:** If you encounter `gyp` or `sqlite3` build errors, please check your Node.js version. Proceeding with Node.js v18 or v20 LTS is recommended to use prebuilt binaries.
+
 ### :notebook: Prerequisites
 
--   Node.js
+-   Node.js (v18 or v20 LTS recommended. Newer versions like v22 may fail to install `sqlite3` without C++ build tools)
 -   Docker (optional)
 
 ### :wrench: Configuration
