@@ -10,8 +10,8 @@ function getEnvVariable(key: string): string {
 
 async function configureDataSource(): Promise<DataSource> {
     return new DataSource({
-        database: getEnvVariable('DB_PATH'),
-        type: 'sqlite',
+        database: getEnvVariable(''),
+        type: 'better-sqlite3',
         synchronize: false,
         logging: false,
         entities: ['src/**/**.entity.ts'],

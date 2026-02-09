@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  bitcoind:
+    image: btcpayserver/bitcoin:24.0.1-1
+    container_name: silent-pay-bitcoind
+    ports:
+      - "18443:18443"  # RPC port for regtest
+      - "18444:18444"  # P2P port for regtest
+    environment:
+      BITCOIN_NETWORK: regtest
+      BITCOIN_EXTRA_ARGS: |
+        server=1
+        rest=1
+        rpcbind=0.0.0.0:18443
+        rpcallowip=0.0.0.0/0
+        rpcuser=polaruser
+        rpcpassword=password
+        debug=0
+        logips=1
+        logtimemicros=1
+        blockmintxfee=0
+        deprecatedrpc=signrawtransaction
+        listenonion=0
+        fallbackfee=0.00001
+        txindex=1
+    volumes:
+      - bitcoin_data:/data
+    healthcheck:
+      test: ["CMD", "bitcoin-cli", "-regtest", "-rpcuser=polaruser", "-rpcpassword=password", "getblockchaininfo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  bitcoin_data:
