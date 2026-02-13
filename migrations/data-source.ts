@@ -1,4 +1,8 @@
 import { DataSource } from 'typeorm';
+import {
+    ensureDatabaseDirectory,
+    resolveDatabasePath,
+} from '../src/common/db-path';
 
 function getEnvVariable(key: string): string {
     const value = process.env[key];
@@ -9,9 +13,12 @@ function getEnvVariable(key: string): string {
 }
 
 async function configureDataSource(): Promise<DataSource> {
+    const databasePath = resolveDatabasePath(getEnvVariable('DB_PATH'));
+    ensureDatabaseDirectory(databasePath);
+
     return new DataSource({
-        database: getEnvVariable('DB_PATH'),
-        type: 'sqlite',
+        database: databasePath,
+        type: 'better-sqlite3',
         synchronize: false,
         logging: false,
         entities: ['src/**/**.entity.ts'],
