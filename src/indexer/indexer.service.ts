@@ -4,6 +4,14 @@ import { createTaggedHash, extractPubKeyFromScript } from '@/common/common';
 import { publicKeyCombine, publicKeyTweakMul } from 'secp256k1';
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import {
+    hexToUint8Array,
+    concatUint8Arrays,
+    uint8ArrayToHex,
+    compareUint8Arrays,
+    createView,
+    reverseUint8Array,
+} from '@/common/uint8array';
 
 export type TransactionInput = {
     txid: string; // transaction id
@@ -19,7 +27,7 @@ export type TransactionOutput = {
 };
 
 export type ScanTweakAndOutputs = {
-    scanTweak: Buffer;
+    scanTweak: Uint8Array;
     eligibleOutputs: TransactionOutputEntity[];
 };
 
@@ -42,7 +50,7 @@ export class IndexerService {
             transaction.blockHeight = blockHeight;
             transaction.blockHash = blockHash;
             transaction.blockTime = blockTime;
-            transaction.scanTweak = scanTweak.toString('hex');
+            transaction.scanTweak = uint8ArrayToHex(scanTweak);
 
             for (const output of outputs) {
                 output.transaction = transaction;
@@ -89,12 +97,12 @@ export class IndexerService {
         }
 
         // extract the input public keys from the transaction
-        const pubKeys: Buffer[] = [];
+        const pubKeys: Uint8Array[] = [];
         for (const input of vin) {
             const pubKey = extractPubKeyFromScript(
-                Buffer.from(input.prevOutScript, 'hex'),
-                Buffer.from(input.scriptSig, 'hex'),
-                input.witness?.map((w) => Buffer.from(w, 'hex')),
+                hexToUint8Array(input.prevOutScript),
+                hexToUint8Array(input.scriptSig),
+                input.witness?.map((w) => hexToUint8Array(w)),
             );
             if (pubKey) pubKeys.push(pubKey);
         }
@@ -102,26 +110,28 @@ export class IndexerService {
         if (pubKeys.length === 0) return null;
 
         const smallestOutpoint = this.getSmallestOutpoint(vin);
-
-        let sumOfPublicKeys: Buffer;
-        try {
-            sumOfPublicKeys = Buffer.from(publicKeyCombine(pubKeys, true));
-        } catch (error) {
-            // if sumOfPublicKeys is the point at infinity(not valid), skip the transaction
-            // https://github.com/bitcoin/bips/blob/master/bip-0352.mediawiki#scanning
-            if (error.message === 'The sum of the public keys is not valid') {
-                return null;
-            }
-            throw error;
-        }
+        const sumOfPublicKeys = new Uint8Array(
+            publicKeyCombine(pubKeys, true),
+        );
+        // let sumOfPublicKeys: Buffer;
+        // try {
+        //     sumOfPublicKeys = Buffer.from(publicKeyCombine(pubKeys, true));
+        // } catch (error) {
+        //     // if sumOfPublicKeys is the point at infinity(not valid), skip the transaction
+        //     // https://github.com/bitcoin/bips/blob/master/bip-0352.mediawiki#scanning
+        //     if (error.message === 'The sum of the public keys is not valid') {
+        //         return null;
+        //     }
+        //     throw error;
+        // }
 
         const inputHash = createTaggedHash(
             'BIP0352/Inputs',
-            Buffer.concat([smallestOutpoint, sumOfPublicKeys]),
+            concatUint8Arrays([smallestOutpoint, sumOfPublicKeys]),
         );
 
         // A * inputHash
-        const scanTweak = Buffer.from(
+        const scanTweak = new Uint8Array(
             publicKeyTweakMul(sumOfPublicKeys, inputHash, true),
         );
 
@@ -132,16 +142,20 @@ export class IndexerService {
         return !!spk.match(/^5120[0-9a-fA-F]{64}$/);
     }
 
-    private getSmallestOutpoint(vins: TransactionInput[]): Buffer {
+    private getSmallestOutpoint(vins: TransactionInput[]): Uint8Array {
         const outpoints = vins.map((vin) => {
-            const n = Buffer.alloc(4);
-            n.writeUInt32LE(vin.vout);
-            return Buffer.concat([Buffer.from(vin.txid, 'hex').reverse(), n]);
+            const n = new Uint8Array(4);
+            const view = createView(n);
+            view.setUint32(0, vin.vout, true); // true = little endian
+            return concatUint8Arrays([
+                reverseUint8Array(hexToUint8Array(vin.txid)),
+                n,
+            ]);
         });
 
         let smallest = outpoints[0];
         for (const outpoint of outpoints) {
-            if (outpoint.compare(smallest) < 0) smallest = outpoint;
+            if (compareUint8Arrays(outpoint, smallest) < 0) smallest = outpoint;
         }
         return smallest;
     }

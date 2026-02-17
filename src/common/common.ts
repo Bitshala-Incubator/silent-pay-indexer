@@ -2,6 +2,12 @@ import { createHash } from 'crypto';
 import { publicKeyVerify } from 'secp256k1';
 import { NUMS_H, SATS_PER_BTC } from '@/common/constants';
 import * as currency from 'currency.js';
+import {
+    areUint8ArraysEqual,
+    createView,
+    hexToUint8Array,
+    concatUint8Arrays,
+} from '@/common/uint8array';
 
 export const camelToSnakeCase = (inputString: string) => {
     return inputString
@@ -13,29 +19,36 @@ export const camelToSnakeCase = (inputString: string) => {
         .toUpperCase();
 };
 
-const verifyPubKey = (pubKey: Buffer): boolean => {
+const verifyPubKey = (pubKey: Uint8Array): boolean => {
     return pubKey.length === 33 && publicKeyVerify(pubKey);
 };
 
-const hash160 = (buffer: Buffer): Buffer => {
-    const sha256 = createHash('sha256').update(buffer).digest();
-    return createHash('ripemd160').update(sha256).digest();
+const hash160 = (buffer: Uint8Array): Uint8Array => {
+    const sha256 = new Uint8Array(createHash('sha256').update(buffer).digest());
+    return new Uint8Array(createHash('ripemd160').update(sha256).digest());
 };
 
-export const createTaggedHash = (tag: string, buffer: Buffer): Buffer => {
-    const tagHash = createHash('sha256').update(tag, 'utf8').digest();
-    return createHash('sha256')
-        .update(tagHash)
-        .update(tagHash)
-        .update(buffer)
-        .digest();
+export const createTaggedHash = (
+    tag: string,
+    buffer: Uint8Array,
+): Uint8Array => {
+    const tagHash = new Uint8Array(
+        createHash('sha256').update(tag, 'utf8').digest(),
+    );
+    return new Uint8Array(
+        createHash('sha256')
+            .update(tagHash)
+            .update(tagHash)
+            .update(buffer)
+            .digest(),
+    );
 };
 
 export const extractPubKeyFromScript = (
-    scriptPubKey: Buffer,
-    scriptSig: Buffer,
-    witness: Buffer[] = [],
-): Buffer | null => {
+    scriptPubKey: Uint8Array,
+    scriptSig: Uint8Array,
+    witness: Uint8Array[] = [],
+): Uint8Array | null => {
     // P2PKH
     // scriptPubKey: OP_DUP OP_HASH160 OP_PUSHBYTES_20 <20 bytes> OP_EQUALVERIFY OP_CHECKSIG
     if (
@@ -52,7 +65,10 @@ export const extractPubKeyFromScript = (
         // a better way to do this would be to parse the scriptSig
         for (let i = scriptSig.length; i >= 33; i--) {
             const pubKey = scriptSig.subarray(i - 33, i);
-            if (hash160(pubKey).equals(pubKeyHash) && publicKeyVerify(pubKey))
+            if (
+                areUint8ArraysEqual(hash160(pubKey), pubKeyHash) &&
+                publicKeyVerify(pubKey)
+            )
                 return pubKey;
         }
     }
@@ -105,11 +121,11 @@ export const extractPubKeyFromScript = (
             if (witness.length > 1) {
                 const controlBlock = witness[witness.length - 1];
                 const internalKey = controlBlock.subarray(1, 33);
-                if (internalKey.equals(NUMS_H)) return null;
+                if (areUint8ArraysEqual(internalKey, NUMS_H)) return null;
             }
 
-            const pubKey = Buffer.concat([
-                Buffer.from([0x02]),
+            const pubKey = concatUint8Arrays([
+                new Uint8Array([0x02]),
                 scriptPubKey.subarray(2),
             ]);
             if (verifyPubKey(pubKey)) return pubKey;
@@ -121,23 +137,24 @@ export const extractPubKeyFromScript = (
 
 export const encodeVarInt = (
     value: number,
-    buffer: Buffer,
+    buffer: Uint8Array,
     offset = 0,
 ): number => {
+    const view = createView(buffer, offset);
     if (value < 0xfd) {
-        buffer.writeUInt8(value, offset);
+        view.setUint8(offset, value);
         return offset + 1;
     } else if (value <= 0xffff) {
-        buffer.writeUInt8(0xfd, offset);
-        buffer.writeUInt16LE(value, offset + 2);
+        view.setUint8(offset, 0xfd);
+        view.setUint16(1, value, true); // true = little endian
         return offset + 3;
     } else if (value <= 0xffffffff) {
-        buffer.writeUInt8(0xfe, offset);
-        buffer.writeUInt32LE(value, offset + 4);
+        view.setUint8(0, 0xfe);
+        view.setUint32(1, value, true);
         return offset + 5;
     } else {
-        buffer.writeUInt8(0xff, offset);
-        buffer.writeBigUInt64LE(BigInt(value), offset + 8);
+        view.setUint8(0, 0xff);
+        view.setBigUint64(1, BigInt(value), true);
         return offset + 9;
     }
 };

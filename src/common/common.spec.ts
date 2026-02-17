@@ -1,4 +1,5 @@
 import { btcToSats, extractPubKeyFromScript } from '@/common/common';
+import { hexToUint8Array, uint8ArrayToHex } from '@/common/uint8array';
 
 describe('Common', () => {
     it.each([
@@ -173,13 +174,13 @@ describe('Common', () => {
         'should extract public key from script: $description',
         ({ scriptPubKey, scriptSig, witness, expected }) => {
             const pubKey = extractPubKeyFromScript(
-                Buffer.from(scriptPubKey, 'hex'),
-                Buffer.from(scriptSig, 'hex'),
-                witness.map((w) => Buffer.from(w, 'hex')),
+                hexToUint8Array(scriptPubKey),
+                hexToUint8Array(scriptSig),
+                witness.map((w) => hexToUint8Array(w)),
             );
 
             if (expected === null) expect(pubKey).toBeNull();
-            else expect(pubKey.toString('hex')).toEqual(expected);
+           else expect(uint8ArrayToHex(pubKey)).toEqual(expected);
         },
     );
 
