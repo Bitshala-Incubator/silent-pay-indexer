@@ -95,7 +95,7 @@ export class SilentBlocksService {
     async getSilentBlockByHash(
         blockHash: string,
         filterSpent: boolean,
-    ): Promise<Buffer> {
+    ): Promise<Uint8Array> {
         const transactions =
             await this.transactionsService.getTransactionByBlockHash(
                 blockHash,
