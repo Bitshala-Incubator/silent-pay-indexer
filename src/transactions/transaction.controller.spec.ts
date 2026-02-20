@@ -79,6 +79,7 @@ describe('TransactionController', () => {
                     provide: getRepositoryToken(Transaction),
                     useValue: {
                         find: () => mockTransactions,
+                        findOne: () => mockTransactions[0],
                     },
                 },
             ],
@@ -152,5 +153,17 @@ describe('TransactionController', () => {
         expect(controllerResult).toEqual({
             transactions: mockTransactions,
         });
+    });
+
+    it('should return transaction by txid', async () => {
+        const getTransactionByTxidSpy = jest.spyOn(
+            transactionsService,
+            'getTransactionByTxid',
+        );
+        const txid = '1';
+        const controllerResult = await controller.getTransactionByTxid(txid);
+
+        expect(getTransactionByTxidSpy).toHaveBeenCalledWith(txid, false);
+        expect(controllerResult).toEqual({ transaction: mockTransactions[0] });
     });
 });

@@ -3,6 +3,7 @@ import {
     BadRequestException,
     Controller,
     Get,
+    NotFoundException,
     Param,
     ParseBoolPipe,
     ParseIntPipe,
@@ -90,5 +91,24 @@ export class TransactionController {
         return await this.transactionsService.getBlockHeightByTimestamp(
             timestamp,
         );
+    }
+
+    @Get('txid/:txid')
+    @UseInterceptors(CacheInterceptor)
+    async getTransactionByTxid(
+        @Param('txid') txid: string,
+        @Query('filterSpent', new ParseBoolPipe({ optional: true }))
+        filterSpent = false,
+    ) {
+        const transaction = await this.transactionsService.getTransactionByTxid(
+            txid,
+            filterSpent,
+        );
+        if (!transaction) {
+            throw new NotFoundException(
+                `Transaction with txid ${txid} not found`,
+            );
+        }
+        return { transaction: transaction };
     }
 }

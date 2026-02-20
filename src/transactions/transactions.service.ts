@@ -19,7 +19,7 @@ export class TransactionsService {
                 blockHeight,
                 ...(filterSpent && {
                     outputs: {
-                        isSpent: !filterSpent,
+                        isSpent: false,
                     },
                 }),
             },
@@ -37,7 +37,7 @@ export class TransactionsService {
                 blockHeight: Between(startHeight, endHeight),
                 ...(filterSpent && {
                     outputs: {
-                        isSpent: !filterSpent,
+                        isSpent: false,
                     },
                 }),
             },
@@ -57,9 +57,22 @@ export class TransactionsService {
                 blockHash,
                 ...(filterSpent && {
                     outputs: {
-                        isSpent: !filterSpent,
+                        isSpent: false,
                     },
                 }),
+            },
+            relations: { outputs: true },
+        });
+    }
+
+    async getTransactionByTxid(
+        txid: string,
+        filterSpent: boolean,
+    ): Promise<Transaction | null> {
+        return this.transactionRepository.findOne({
+            where: {
+                id: txid,
+                ...(filterSpent && { outputs: { isSpent: false } }),
             },
             relations: { outputs: true },
         });
