@@ -5,6 +5,7 @@ import { camelToSnakeCase } from '@/common/common';
 import { Config } from '@/configuration.model';
 import { validateSync } from 'class-validator';
 import { plainToClass } from 'class-transformer';
+import { ensureDatabaseDirectory, resolveDatabasePath } from '@/common/db-path';
 
 const getConfigFilePath = (): string => {
     switch (process.env.NODE_ENV) {
@@ -56,6 +57,10 @@ export default () => {
     if (errors.length > 0) {
         throw new Error(errors.toString());
     }
+
+    const resolvedDatabasePath = resolveDatabasePath(config.db.path);
+    ensureDatabaseDirectory(resolvedDatabasePath);
+    config.db.path = resolvedDatabasePath;
 
     return config;
 };

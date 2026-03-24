@@ -41,7 +41,7 @@ import { WinstonModuleOptions } from 'nest-winston/dist/winston.interfaces';
             imports: [ConfigModule],
             inject: [ConfigService],
             useFactory: (configService: ConfigService) => ({
-                type: 'sqlite',
+                type: 'better-sqlite3',
                 database: configService.get<string>('db.path'),
                 synchronize: configService.get<boolean>('db.synchronize'),
                 autoLoadEntities: true,

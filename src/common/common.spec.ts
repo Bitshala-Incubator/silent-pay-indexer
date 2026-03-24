@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+
 import { btcToSats, extractPubKeyFromScript } from '@/common/common';
 
 describe('Common', () => {

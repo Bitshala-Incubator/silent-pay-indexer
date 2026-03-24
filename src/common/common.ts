@@ -1,7 +1,11 @@
 import { createHash } from 'crypto';
 import { publicKeyVerify } from 'secp256k1';
 import { NUMS_H, SATS_PER_BTC } from '@/common/constants';
-import * as currency from 'currency.js';
+import currency = require('currency.js');
+
+const toUint8Array = (buffer: Buffer): Uint8Array => {
+    return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+};
 
 export const camelToSnakeCase = (inputString: string) => {
     return inputString
@@ -14,20 +18,20 @@ export const camelToSnakeCase = (inputString: string) => {
 };
 
 const verifyPubKey = (pubKey: Buffer): boolean => {
-    return pubKey.length === 33 && publicKeyVerify(pubKey);
+    return pubKey.length === 33 && publicKeyVerify(toUint8Array(pubKey));
 };
 
 const hash160 = (buffer: Buffer): Buffer => {
-    const sha256 = createHash('sha256').update(buffer).digest();
-    return createHash('ripemd160').update(sha256).digest();
+    const sha256 = createHash('sha256').update(toUint8Array(buffer)).digest();
+    return createHash('ripemd160').update(toUint8Array(sha256)).digest();
 };
 
 export const createTaggedHash = (tag: string, buffer: Buffer): Buffer => {
     const tagHash = createHash('sha256').update(tag, 'utf8').digest();
     return createHash('sha256')
-        .update(tagHash)
-        .update(tagHash)
-        .update(buffer)
+    .update(toUint8Array(tagHash))
+    .update(toUint8Array(tagHash))
+    .update(toUint8Array(buffer))
         .digest();
 };
 
@@ -52,7 +56,10 @@ export const extractPubKeyFromScript = (
         // a better way to do this would be to parse the scriptSig
         for (let i = scriptSig.length; i >= 33; i--) {
             const pubKey = scriptSig.subarray(i - 33, i);
-            if (hash160(pubKey).equals(pubKeyHash) && publicKeyVerify(pubKey))
+            if (
+                hash160(pubKey).equals(toUint8Array(pubKeyHash)) &&
+                publicKeyVerify(toUint8Array(pubKey))
+            )
                 return pubKey;
         }
     }
@@ -105,13 +112,10 @@ export const extractPubKeyFromScript = (
             if (witness.length > 1) {
                 const controlBlock = witness[witness.length - 1];
                 const internalKey = controlBlock.subarray(1, 33);
-                if (internalKey.equals(NUMS_H)) return null;
+                if (internalKey.equals(toUint8Array(NUMS_H))) return null;
             }
 
-            const pubKey = Buffer.concat([
-                Buffer.from([0x02]),
-                scriptPubKey.subarray(2),
-            ]);
+            const pubKey = Buffer.from([0x02, ...scriptPubKey.subarray(2)]);
             if (verifyPubKey(pubKey)) return pubKey;
         }
     }
