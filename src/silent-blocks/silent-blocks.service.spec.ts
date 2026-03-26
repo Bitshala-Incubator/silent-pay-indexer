@@ -104,7 +104,11 @@ describe('SilentBlocksService', () => {
         );
 
         // Mark all outputs as spent
-        await transactionOutputRepository.update({}, { isSpent: true });
+        await transactionOutputRepository
+            .createQueryBuilder()
+            .update()
+            .set({ isSpent: true })
+            .execute();
 
         encodedBlock = await service.getSilentBlockByHash(
             silentBlockEncodingFixture[0].blockHash,
