@@ -26,7 +26,7 @@ export class SilentBlocksGateway
         this.logger.debug(`Client disconnected: ${remoteAddress}`);
     }
 
-    broadcastSilentBlock(silentBlock: Buffer) {
+    broadcastSilentBlock(silentBlock: Uint8Array) {
         for (const client of this.server.clients) {
             if (client.readyState === WebSocket.OPEN) {
                 client.send(silentBlock);

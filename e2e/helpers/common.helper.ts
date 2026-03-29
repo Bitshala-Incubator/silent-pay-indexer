@@ -2,6 +2,7 @@ import { Payment, Transaction } from 'bitcoinjs-lib';
 import { IndexerService } from '@/indexer/indexer.service';
 import { Transaction as TransactionEntity } from '@/transactions/transaction.entity';
 import { TransactionOutput } from '@/transactions/transaction-output.entity';
+import { uint8ArrayToHex, createView } from '@/common/uint8array';
 
 export function generateScanTweakAndOutputEntity(
     transaction: Transaction,
@@ -30,7 +31,7 @@ export function generateScanTweakAndOutputEntity(
     const { scanTweak, eligibleOutputs } =
         new IndexerService().deriveOutputsAndComputeScanTweak(txins, txouts);
 
-    return [scanTweak.toString('hex'), eligibleOutputs];
+    return [uint8ArrayToHex(scanTweak), eligibleOutputs];
 }
 
 export function transactionToEntity(
@@ -49,12 +50,29 @@ export function transactionToEntity(
     return entityTransaction;
 }
 
-export const readVarInt = (data: Buffer, cursor: number): number => {
-    const firstByte = data.readUInt8(cursor);
+export const readVarInt = (data: Uint8Array, cursor: number): number => {
+    if (cursor >= data.length) {
+        throw new Error('readVarInt: cursor out of bounds');
+    }
+    const view = createView(data, cursor);
+    const firstByte = view.getUint8(0);
     if (firstByte < 0xfd) return firstByte;
-    else if (firstByte === 0xfd) return data.readUInt16LE(cursor + 1);
-    else if (firstByte === 0xfe) return data.readUInt32LE(cursor + 1);
-    else return Number(data.readBigUInt64LE(cursor + 1));
+    else if (firstByte === 0xfd) {
+        if (cursor + 3 > data.length) {
+            throw new Error('readVarInt: insufficient data for uint16');
+        }
+        return view.getUint16(1, true); // true = little endian
+    } else if (firstByte === 0xfe) {
+        if (cursor + 5 > data.length) {
+            throw new Error('readVarInt: insufficient data for uint32');
+        }
+        return view.getUint32(1, true);
+    } else {
+        if (cursor + 9 > data.length) {
+            throw new Error('readVarInt: insufficient data for uint64');
+        }
+        return Number(view.getBigUint64(1, true));
+    }
 };
 
 export interface SilentBlockTransaction {
