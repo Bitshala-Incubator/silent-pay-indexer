@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Transaction } from '@/transactions/transaction.entity';
+import { TransactionData } from '@/storage/interfaces';
 import { TransactionsService } from '@/transactions/transactions.service';
 import { SILENT_PAYMENT_BLOCK_TYPE } from '@/common/constants';
 import { encodeVarInt, varIntSize } from '@/common/common';
@@ -28,7 +28,7 @@ export class SilentBlocksService {
         this.silentBlocksGateway.broadcastSilentBlock(silentBlock);
     }
 
-    private getSilentBlockLength(transactions: Transaction[]): number {
+    private getSilentBlockLength(transactions: TransactionData[]): number {
         let length = 1 + varIntSize(transactions.length); // 1 byte for type + varint for transactions count
 
         for (const tx of transactions) {
@@ -39,7 +39,7 @@ export class SilentBlocksService {
         return length;
     }
 
-    public encodeSilentBlock(transactions: Transaction[]): Buffer {
+    public encodeSilentBlock(transactions: TransactionData[]): Buffer {
         const block = Buffer.alloc(this.getSilentBlockLength(transactions));
         let cursor = 0;
 
