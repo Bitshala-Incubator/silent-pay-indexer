@@ -12,6 +12,7 @@ import { BlockStateModule } from '@/block-state/block-state.module';
 import { DbTransactionModule } from '@/db-transaction/db-transaction.module';
 import { DbTransactionService } from '@/db-transaction/db-transaction.service';
 import { EventEmitter2, EventEmitterModule } from '@nestjs/event-emitter';
+import { StorageService } from '@/storage/storage.service';
 
 @Module({
     imports: [
@@ -33,6 +34,7 @@ import { EventEmitter2, EventEmitterModule } from '@nestjs/event-emitter';
                 BlockStateService,
                 DbTransactionService,
                 EventEmitter2,
+                StorageService,
             ],
             useFactory: (
                 configService: ConfigService,
@@ -41,6 +43,7 @@ import { EventEmitter2, EventEmitterModule } from '@nestjs/event-emitter';
                 blockStateService: BlockStateService,
                 dbTransactionService: DbTransactionService,
                 eventEmitter: EventEmitter2,
+                storageService: StorageService,
             ) => {
                 switch (configService.get<ProviderType>('providerType')) {
                     case ProviderType.ESPLORA:
@@ -51,6 +54,7 @@ import { EventEmitter2, EventEmitterModule } from '@nestjs/event-emitter';
                             blockStateService,
                             dbTransactionService,
                             eventEmitter,
+                            storageService,
                         );
                     case ProviderType.BITCOIN_CORE_RPC:
                         return new BitcoinCoreProvider(
@@ -60,6 +64,7 @@ import { EventEmitter2, EventEmitterModule } from '@nestjs/event-emitter';
                             blockStateService,
                             dbTransactionService,
                             eventEmitter,
+                            storageService,
                         );
                     default:
                         throw Error('unrecognised provider type in config');
