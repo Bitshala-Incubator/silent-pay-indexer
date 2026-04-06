@@ -1,6 +1,5 @@
 db:
-  path: '~/.silent-pay-indexer/db/database.sqlite'
-  synchronize: false
+  path: '~/.silent-pay-indexer/db/rocksdb'
 app:
   port: 80
   verbose: false

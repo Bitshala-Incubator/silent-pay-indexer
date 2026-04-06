@@ -1,6 +1,5 @@
 db:
-  path: ':memory:'
-  synchronize: true
+  path: '/tmp/silent-pay-indexer-e2e-rocksdb'
 app:
   port: 3000
   verbose: false
