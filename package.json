@@ -39,17 +39,17 @@
     "@nestjs/swagger": "^7.3.1",
     "@nestjs/throttler": "^6.4.0",
     "@nestjs/websockets": "^10.3.7",
-    "axios": "^1.7.2",
+    "axios": "^1.14.0",
     "currency.js": "^2.0.4",
     "encoding-down": "^7.1.0",
-    "js-yaml": "^4.1.0",
+    "js-yaml": "^4.1.1",
     "levelup": "^5.1.1",
     "nest-winston": "^1.10.2",
     "reflect-metadata": "^0.1.13",
     "rocksdb": "^5.2.1",
-    "rxjs": "^7.2.0",
+    "rxjs": "^7.8.2",
     "secp256k1": "^5.0.1",
-    "winston": "^3.18.3"
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.5",
@@ -89,8 +89,21 @@
     "ts-node": "^10.0.0",
     "tsconfig-paths": "4.2.0",
     "typescript": "^4.7.4",
-    "webpack": "^5.91.0",
+    "webpack": "^5.105.4",
     "webpack-node-externals": "^3.0.0"
+  },
+  "overrides": {
+    "lodash": "4.18.1",
+    "multer": "2.1.1",
+    "picomatch": "4.0.4",
+    "tmp": "0.2.5",
+    "js-yaml": "$js-yaml",
+    "@angular-devkit/core": {
+      "ajv": "8.18.0"
+    },
+    "@nestjs/cli": {
+      "webpack": "^5.105.0"
+    }
   },
   "lint-staged": {
     "*.ts": [
