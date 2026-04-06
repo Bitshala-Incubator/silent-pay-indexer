@@ -1,32 +1,22 @@
 import { Injectable } from '@nestjs/common';
-import { Repository } from 'typeorm';
-import { BlockState } from '@/block-state/block-state.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { TransactionsService } from '@/transactions/transactions.service';
+import { StorageService } from '@/storage/storage.service';
+import { BlockStateData } from '@/storage/interfaces';
 
 @Injectable()
 export class BlockStateService {
-    constructor(
-        @InjectRepository(BlockState)
-        private readonly blockStateRepository: Repository<BlockState>,
-        private readonly transactionService: TransactionsService,
-    ) {}
+    constructor(private readonly storageService: StorageService) {}
 
-    async getCurrentBlockState(): Promise<BlockState> {
-        return (
-            await this.blockStateRepository.find({
-                order: {
-                    blockHeight: 'DESC',
-                },
-                take: 1,
-            })
-        )[0];
+    async getCurrentBlockState(): Promise<BlockStateData> {
+        return this.storageService.getCurrentBlockState();
     }
 
-    async removeState(state: BlockState): Promise<void> {
-        await this.blockStateRepository.delete(state.blockHeight);
-        await this.transactionService.deleteTransactionByBlockHash(
+    async removeState(state: BlockStateData): Promise<void> {
+        const batch = this.storageService.createBatch();
+        this.storageService.deleteBlockState(batch, state.blockHeight);
+        await this.storageService.deleteTransactionsByBlockHash(
+            batch,
             state.blockHash,
         );
+        await batch.commit();
     }
 }
