@@ -1,37 +1,41 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Transaction } from '@/transactions/transaction.entity';
 import { IndexerService } from '@/indexer/indexer.service';
 import { testData } from '@/indexer/indexer.fixture';
-import { DataSource } from 'typeorm';
 import { DbTransactionService } from '@/db-transaction/db-transaction.service';
-import { TransactionOutput } from '@/transactions/transaction-output.entity';
+import { StorageService } from '@/storage/storage.service';
+import { ConfigService } from '@nestjs/config';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 
 describe('IndexerService', () => {
     let service: IndexerService;
+    let storageService: StorageService;
     let dbTransactionService: DbTransactionService;
-    let dataSource: DataSource;
+    let tmpDir: string;
 
     beforeEach(async () => {
-        dataSource = new DataSource({
-            type: 'sqlite',
-            database: ':memory:',
-            dropSchema: true,
-            entities: [Transaction, TransactionOutput],
-            synchronize: true,
-            logging: false,
-        });
-        await dataSource.initialize();
+        tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'indexer-test-'));
 
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 IndexerService,
                 DbTransactionService,
+                StorageService,
                 {
-                    provide: DataSource,
-                    useValue: dataSource,
+                    provide: ConfigService,
+                    useValue: {
+                        get: (key: string) => {
+                            if (key === 'db.path') return tmpDir;
+                            return null;
+                        },
+                    },
                 },
             ],
         }).compile();
+
+        storageService = module.get<StorageService>(StorageService);
+        await storageService.onModuleInit();
 
         service = module.get<IndexerService>(IndexerService);
         dbTransactionService =
@@ -45,7 +49,7 @@ describe('IndexerService', () => {
     it.each(testData)(
         'should validate that scanTweaks are created for only valid transactions',
         async (transaction) => {
-            await dbTransactionService.execute(async (manager) => {
+            await dbTransactionService.execute(async (batch) => {
                 await service.index(
                     transaction.txid,
                     transaction.vin,
@@ -53,17 +57,14 @@ describe('IndexerService', () => {
                     0,
                     '0000000000000000000000000000000000000000000000000000000000000000',
                     0,
-                    manager,
+                    batch,
                 );
             });
 
-            const transactionEntity =
-                await dbTransactionService.execute<Transaction>(
-                    async (manager) =>
-                        manager.findOne(Transaction, {
-                            where: { id: transaction.txid },
-                        }),
-                );
+            const transactionEntity = await storageService.getTransactionByTxid(
+                transaction.txid,
+                false,
+            );
 
             if (transaction.scanTweak) {
                 expect(transactionEntity.scanTweak).toBe(transaction.scanTweak);
@@ -74,6 +75,7 @@ describe('IndexerService', () => {
     );
 
     afterEach(async () => {
-        await dataSource.destroy();
+        await storageService.onModuleDestroy();
+        fs.rmSync(tmpDir, { recursive: true, force: true });
     });
 });
