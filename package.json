@@ -22,10 +22,7 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": " NODE_ENV=e2e node --trace-warnings node_modules/.bin/jest --runInBand --no-cache --forceExit --config jest-e2e.config.ts",
-    "migration:generate": "typeorm-ts-node-commonjs migration:generate ./migrations/migrations -d migrations/data-source.ts",
-    "migration:run": "typeorm-ts-node-commonjs migration:run -d migrations/data-source.ts -t each",
-    "migration:revert": "typeorm-ts-node-commonjs migration:revert -d migrations/data-source.ts"
+    "test:e2e": " NODE_ENV=e2e node --trace-warnings node_modules/.bin/jest --runInBand --no-cache --forceExit --config jest-e2e.config.ts"
   },
   "dependencies": {
     "@nestjs/cache-manager": "^3.0.1",
@@ -41,17 +38,17 @@
     "@nestjs/schedule": "^3.0.0",
     "@nestjs/swagger": "^7.3.1",
     "@nestjs/throttler": "^6.4.0",
-    "@nestjs/typeorm": "^10.0.2",
     "@nestjs/websockets": "^10.3.7",
     "axios": "^1.7.2",
     "currency.js": "^2.0.4",
+    "encoding-down": "^7.1.0",
     "js-yaml": "^4.1.0",
+    "levelup": "^5.1.1",
     "nest-winston": "^1.10.2",
     "reflect-metadata": "^0.1.13",
+    "rocksdb": "^5.2.1",
     "rxjs": "^7.2.0",
     "secp256k1": "^5.0.1",
-    "sqlite3": "^5.1.7",
-    "typeorm": "^0.3.20",
     "winston": "^3.18.3"
   },
   "devDependencies": {
