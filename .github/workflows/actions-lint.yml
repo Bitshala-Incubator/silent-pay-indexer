@@ -31,8 +31,6 @@ jobs:
       - name: Install Dependencies
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: npm install
-        env:
-          CXXFLAGS: -include cstdint
       - name: Run prettier
         run: npm run format:check
       - name: Run eslint

@@ -5,13 +5,7 @@ import {
     Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-// Native modules — use require for CJS compatibility
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const levelup = require('levelup');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const rocksdb = require('rocksdb');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const encodingDown = require('encoding-down');
+import { open, RootDatabase } from 'lmdb';
 import { BatchWriter } from '@/storage/batch-writer';
 import {
     TransactionData,
@@ -47,31 +41,30 @@ import {
     timeIndexSeek,
 } from '@/storage/key-encoding';
 
-type LevelDB = any;
-
 @Injectable()
 export class StorageService implements OnModuleInit, OnModuleDestroy {
-    private db: LevelDB;
+    private db: RootDatabase<Buffer, Buffer>;
     private readonly logger = new Logger(StorageService.name);
 
     constructor(private readonly configService: ConfigService) {}
 
     async onModuleInit(): Promise<void> {
         const dbPath = this.configService.get<string>('db.path');
-        this.logger.log(`Opening RocksDB at ${dbPath}`);
-        this.db = levelup(
-            encodingDown(rocksdb(dbPath), {
-                keyEncoding: 'binary',
-                valueEncoding: 'binary',
-            }),
-        );
-        await this.db.open();
+        this.logger.log(`Opening LMDB at ${dbPath}`);
+        this.db = open({
+            path: dbPath,
+            keyEncoding: 'binary',
+            encoding: 'binary',
+            compression: true,
+            // 10 GB map size — LMDB requires pre-configured max; grows lazily
+            mapSize: 10 * 1024 * 1024 * 1024,
+        });
     }
 
     async onModuleDestroy(): Promise<void> {
         if (this.db) {
             await this.db.close();
-            this.logger.log('RocksDB closed');
+            this.logger.log('LMDB closed');
         }
     }
 
@@ -81,47 +74,28 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
 
     // --- Low-level helpers ---
 
-    private async get(key: Buffer): Promise<Buffer | null> {
-        try {
-            return await this.db.get(key);
-        } catch (err) {
-            if (err.notFound || err.type === 'NotFoundError') return null;
-            throw err;
-        }
+    private get(key: Buffer): Buffer | null {
+        const val = this.db.getBinary(key);
+        return val ? Buffer.from(val) : null;
     }
 
-    private async collectStream<T>(
+    private collectRange<T>(
         opts: { gte: Buffer; lt: Buffer; reverse?: boolean; limit?: number },
         decode: (key: Buffer, value: Buffer) => T,
-    ): Promise<T[]> {
-        return new Promise((resolve, reject) => {
-            const results: T[] = [];
-            let rejected = false;
-            const stream = this.db.createReadStream({
-                ...opts,
-                keyAsBuffer: true,
-                valueAsBuffer: true,
-            });
-            stream.on(
-                'data',
-                ({ key, value }: { key: Buffer; value: Buffer }) => {
-                    if (rejected) return;
-                    try {
-                        results.push(decode(key, value));
-                    } catch (err) {
-                        rejected = true;
-                        stream.destroy();
-                        reject(err);
-                    }
-                },
-            );
-            stream.on('error', (err) => {
-                if (!rejected) reject(err);
-            });
-            stream.on('end', () => {
-                if (!rejected) resolve(results);
-            });
+    ): T[] {
+        const results: T[] = [];
+        const range = this.db.getRange({
+            start: opts.gte,
+            end: opts.lt,
+            reverse: opts.reverse,
+            limit: opts.limit,
         });
+        for (const { key, value } of range) {
+            results.push(
+                decode(Buffer.from(key as any), Buffer.from(value as any)),
+            );
+        }
+        return results;
     }
 
     // --- Transaction reads ---
@@ -130,11 +104,11 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
         txid: string,
         filterSpent: boolean,
     ): Promise<TransactionData | null> {
-        const txBuf = await this.get(encodeTxKey(txid));
+        const txBuf = this.get(encodeTxKey(txid));
         if (!txBuf) return null;
 
         const tx = decodeTxValue(txBuf);
-        const outputs = await this.getOutputsForTxid(txid, filterSpent);
+        const outputs = this.getOutputsForTxid(txid, filterSpent);
         if (filterSpent && outputs.length === 0) return null;
 
         return {
@@ -149,7 +123,7 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
         filterSpent: boolean,
     ): Promise<TransactionData[]> {
         const range = heightIndexRange(height);
-        const txids = await this.collectStream(
+        const txids = this.collectRange(
             range,
             (key) => decodeHeightIndexKey(key).txid,
         );
@@ -162,7 +136,7 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
         filterSpent: boolean,
     ): Promise<TransactionData[]> {
         const range = heightRangeIndexRange(startHeight, endHeight);
-        const txids = await this.collectStream(
+        const txids = this.collectRange(
             range,
             (key) => decodeHeightIndexKey(key).txid,
         );
@@ -174,7 +148,7 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
         filterSpent: boolean,
     ): Promise<TransactionData[]> {
         const range = hashIndexRange(blockHash);
-        const txids = await this.collectStream(
+        const txids = this.collectRange(
             range,
             (key) => decodeHashIndexKey(key).txid,
         );
@@ -183,7 +157,7 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
 
     async getBlockHeightByTimestamp(timestamp: number): Promise<number | null> {
         const range = timeIndexSeek(timestamp);
-        const results = await this.collectStream(
+        const results = this.collectRange(
             { ...range, limit: 1 },
             (key) => decodeTimeIndexKey(key).blockHeight,
         );
@@ -194,11 +168,11 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
 
     async getCurrentBlockState(): Promise<BlockStateData | null> {
         const range = blockStateRange();
-        const results = await this.collectStream(
+        const results = this.collectRange(
             { ...range, reverse: true, limit: 1 },
             (key, value) => ({
                 blockHeight: decodeBlockStateKey(key),
-                blockHash: (value as Buffer).toString('hex'),
+                blockHash: Buffer.from(value).toString('hex'),
             }),
         );
         return results.length > 0 ? results[0] : null;
@@ -207,7 +181,7 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
     // --- Operation state ---
 
     async getOperationState(id: string): Promise<OperationStateData | null> {
-        const buf = await this.get(encodeOpStateKey(id));
+        const buf = this.get(encodeOpStateKey(id));
         if (!buf) return null;
         return {
             id,
@@ -297,7 +271,7 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
             }
 
             // Fall back to committed DB state
-            const existing = await this.get(key);
+            const existing = this.get(key);
             if (!existing) continue; // output not in our index (not P2TR)
 
             const decoded = decodeOutputValue(existing);
@@ -333,14 +307,14 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
     ): Promise<void> {
         // Find all txids for this block hash
         const range = hashIndexRange(blockHash);
-        const txids = await this.collectStream(
+        const txids = this.collectRange(
             range,
             (key) => decodeHashIndexKey(key).txid,
         );
 
         for (const txid of txids) {
             // Get transaction to find blockHeight and blockTime for index cleanup
-            const txBuf = await this.get(encodeTxKey(txid));
+            const txBuf = this.get(encodeTxKey(txid));
             if (!txBuf) continue;
             const tx = decodeTxValue(txBuf);
 
@@ -349,15 +323,12 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
 
             // Delete all outputs and unspent index entries
             const outRange = outputPrefixRange(txid);
-            const outputKeys = await this.collectStream(outRange, (key) => key);
+            const outputKeys = this.collectRange(outRange, (key) => key);
             for (const key of outputKeys) {
                 batch.del(key);
             }
             const unspentRange = unspentPrefixRange(txid);
-            const unspentKeys = await this.collectStream(
-                unspentRange,
-                (key) => key,
-            );
+            const unspentKeys = this.collectRange(unspentRange, (key) => key);
             for (const key of unspentKeys) {
                 batch.del(key);
             }
@@ -375,21 +346,21 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
 
     // --- Private helpers ---
 
-    private async getOutputsForTxid(
+    private getOutputsForTxid(
         txid: string,
         filterSpent: boolean,
-    ): Promise<OutputData[]> {
+    ): OutputData[] {
         if (filterSpent) {
             // Use unspent index to only fetch unspent outputs
             const unspentRange = unspentPrefixRange(txid);
-            const unspentVouts = await this.collectStream(
+            const unspentVouts = this.collectRange(
                 unspentRange,
                 (key) => decodeUnspentIndexKey(key).vout,
             );
 
             const outputs: OutputData[] = [];
             for (const vout of unspentVouts) {
-                const buf = await this.get(encodeOutputKey(txid, vout));
+                const buf = this.get(encodeOutputKey(txid, vout));
                 if (!buf) continue;
                 const decoded = decodeOutputValue(buf);
                 outputs.push({
@@ -403,7 +374,7 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
 
         // Fetch all outputs
         const range = outputPrefixRange(txid);
-        return this.collectStream(range, (key, value) => {
+        return this.collectRange(range, (key, value) => {
             const { vout } = decodeOutputKey(key);
             const decoded = decodeOutputValue(value);
             return {

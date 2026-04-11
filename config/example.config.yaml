@@ -1,5 +1,5 @@
 db:
-  path: '~/.silent-pay-indexer/db/rocksdb'
+  path: '~/.silent-pay-indexer/db/lmdb'
 app:
   port: 80
   verbose: false

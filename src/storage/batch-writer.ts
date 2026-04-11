@@ -1,28 +1,41 @@
-type LevelDB = any;
+import { RootDatabase } from 'lmdb';
+
+type Op =
+    | { type: 'put'; key: Buffer; value: Buffer }
+    | { type: 'del'; key: Buffer };
 
 /**
- * Wraps a RocksDB/LevelUp chained batch for atomic writes.
- * All put/del operations are queued and applied atomically on commit().
- * If commit() is never called, the batch is discarded (implicit rollback).
+ * Queues put/del operations and applies them atomically via LMDB's
+ * transactionSync on commit(). If commit() is never called, the
+ * batch is discarded (implicit rollback).
  */
 export class BatchWriter {
-    private readonly batch: ReturnType<LevelDB['batch']>;
+    private readonly db: RootDatabase<Buffer, Buffer>;
+    private readonly ops: Op[] = [];
 
-    constructor(db: LevelDB) {
-        this.batch = db.batch();
+    constructor(db: RootDatabase<Buffer, Buffer>) {
+        this.db = db;
     }
 
     put(key: Buffer, value: Buffer): this {
-        this.batch.put(key, value);
+        this.ops.push({ type: 'put', key, value });
         return this;
     }
 
     del(key: Buffer): this {
-        this.batch.del(key);
+        this.ops.push({ type: 'del', key });
         return this;
     }
 
     async commit(): Promise<void> {
-        await this.batch.write();
+        this.db.transactionSync(() => {
+            for (const op of this.ops) {
+                if (op.type === 'put') {
+                    this.db.putSync(op.key, op.value);
+                } else {
+                    this.db.removeSync(op.key);
+                }
+            }
+        });
     }
 }

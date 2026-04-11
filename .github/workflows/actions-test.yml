@@ -31,8 +31,6 @@ jobs:
       - name: Install Dependencies
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: npm install
-        env:
-          CXXFLAGS: -include cstdint
       - name: Run unit tests with coverage
         run: npm run test
   e2e-tests:
@@ -54,8 +52,6 @@ jobs:
       - name: Install Dependencies
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: npm install
-        env:
-          CXXFLAGS: -include cstdint
       - name: Run E2E Test
         run: npm run test:e2e
       - name: Fetch Indexer logs

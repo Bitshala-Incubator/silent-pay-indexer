@@ -3,14 +3,6 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Install build dependencies for native modules (rocksdb)
-RUN apk add --no-cache \
-    python3 \
-    py3-setuptools \
-    make \
-    g++ \
-    build-base
-
 # Copy package.json and package-lock.json for efficient layer caching
 COPY package*.json ./
 
@@ -33,17 +25,10 @@ COPY --from=builder /app/dist ./dist
 
 # Copy package.json and install only production dependencies
 COPY package*.json ./
-RUN apk add --no-cache \
-    python3 \
-    py3-setuptools \
-    make \
-    g++ \
-    build-base && \
-    npm install --omit=dev && \
-    apk del python3 py3-setuptools make g++ build-base
+RUN npm install --omit=dev
 
-# Set environment variables for RocksDB path and app port
-ENV DB_PATH="/app/data/rocksdb"
+# Set environment variables for LMDB path and app port
+ENV DB_PATH="/app/data/lmdb"
 ENV APP_PORT="80"
 
 VOLUME /app/data

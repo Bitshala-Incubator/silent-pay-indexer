@@ -41,12 +41,10 @@
     "@nestjs/websockets": "^10.3.7",
     "axios": "^1.14.0",
     "currency.js": "^2.0.4",
-    "encoding-down": "^7.1.0",
     "js-yaml": "^4.1.1",
-    "levelup": "^5.1.1",
+    "lmdb": "^3.5.3",
     "nest-winston": "^1.10.2",
     "reflect-metadata": "^0.1.13",
-    "rocksdb": "^5.2.1",
     "rxjs": "^7.8.2",
     "secp256k1": "^5.0.1",
     "winston": "^3.19.0"
