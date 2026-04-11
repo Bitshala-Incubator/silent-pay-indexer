@@ -1,6 +1,5 @@
 db:
-  path: '~/.silent-pay-indexer/db/database.sqlite'
-  synchronize: false
+  path: '~/.silent-pay-indexer/db/lmdb'
 app:
   port: 80
   verbose: false

@@ -4,40 +4,35 @@ import { TransactionsService } from '@/transactions/transactions.service';
 import { SilentBlocksService } from '@/silent-blocks/silent-blocks.service';
 import { silentBlockEncodingFixture } from '@/silent-blocks/silent-blocks.service.fixtures';
 import { SilentBlocksGateway } from '@/silent-blocks/silent-blocks.gateway';
-import { DataSource, Repository } from 'typeorm';
-import { Transaction } from '@/transactions/transaction.entity';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { TransactionOutput } from '@/transactions/transaction-output.entity';
 import { BlockStateService } from '@/block-state/block-state.service';
+import { StorageService } from '@/storage/storage.service';
+import { ConfigService } from '@nestjs/config';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 
 describe('SilentBlocksService', () => {
     let service: SilentBlocksService;
-    let transactionRepository: Repository<Transaction>;
-    let transactionOutputRepository: Repository<TransactionOutput>;
-    let datasource: DataSource;
+    let storageService: StorageService;
+    let tmpDir: string;
 
     beforeEach(async () => {
-        datasource = new DataSource({
-            type: 'sqlite',
-            database: ':memory:',
-            dropSchema: true,
-            entities: [Transaction, TransactionOutput],
-            synchronize: true,
-            logging: false,
-        });
-        await datasource.initialize();
-        transactionRepository = datasource.getRepository(Transaction);
-        transactionOutputRepository =
-            datasource.getRepository(TransactionOutput);
+        tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'silent-blocks-test-'));
 
         const module: TestingModule = await Test.createTestingModule({
             imports: [CacheModule.register()],
             providers: [
                 SilentBlocksService,
                 TransactionsService,
+                StorageService,
                 {
-                    provide: getRepositoryToken(Transaction),
-                    useValue: transactionRepository,
+                    provide: ConfigService,
+                    useValue: {
+                        get: (key: string) => {
+                            if (key === 'db.path') return tmpDir;
+                            return null;
+                        },
+                    },
                 },
                 {
                     provide: SilentBlocksGateway,
@@ -52,6 +47,8 @@ describe('SilentBlocksService', () => {
             ],
         }).compile();
 
+        storageService = module.get<StorageService>(StorageService);
+        await storageService.onModuleInit();
         service = module.get<SilentBlocksService>(SilentBlocksService);
     });
 
@@ -62,7 +59,18 @@ describe('SilentBlocksService', () => {
     it.each(silentBlockEncodingFixture)(
         'should encode a silent block correctly by block height: $blockHeight',
         async ({ transactions, blockHeight, encodedBlockHex }) => {
-            await transactionRepository.save(transactions);
+            // Seed data via StorageService
+            const batch = storageService.createBatch();
+            for (const tx of transactions) {
+                storageService.saveTransaction(batch, {
+                    ...tx,
+                    outputs: tx.outputs.map((o) => ({
+                        ...o,
+                        transactionId: tx.id,
+                    })),
+                });
+            }
+            await batch.commit();
 
             const encodedBlock = await service.getSilentBlockByHeight(
                 blockHeight,
@@ -76,7 +84,17 @@ describe('SilentBlocksService', () => {
     it.each(silentBlockEncodingFixture)(
         'should encode a silent block correctly by block hash: $blockHash',
         async ({ transactions, blockHash, encodedBlockHex }) => {
-            await transactionRepository.save(transactions);
+            const batch = storageService.createBatch();
+            for (const tx of transactions) {
+                storageService.saveTransaction(batch, {
+                    ...tx,
+                    outputs: tx.outputs.map((o) => ({
+                        ...o,
+                        transactionId: tx.id,
+                    })),
+                });
+            }
+            await batch.commit();
 
             const encodedBlock = await service.getSilentBlockByHash(
                 blockHash,
@@ -88,26 +106,44 @@ describe('SilentBlocksService', () => {
     );
 
     it('should omit spent Outputs if filterSpent is set to true', async () => {
-        // Save initial transactions to the repository
-        await transactionRepository.save(
-            silentBlockEncodingFixture[0].transactions,
-        );
+        const fixture = silentBlockEncodingFixture[0];
 
-        // Fetch and verify non inclusion of spent outputs
+        // Save initial transactions
+        const batch = storageService.createBatch();
+        for (const tx of fixture.transactions) {
+            storageService.saveTransaction(batch, {
+                ...tx,
+                outputs: tx.outputs.map((o) => ({
+                    ...o,
+                    transactionId: tx.id,
+                })),
+            });
+        }
+        await batch.commit();
+
+        // Fetch and verify filtered outputs
         let encodedBlock = await service.getSilentBlockByHash(
-            silentBlockEncodingFixture[0].blockHash,
+            fixture.blockHash,
             true,
         );
 
         expect(encodedBlock.toString('hex')).toEqual(
-            silentBlockEncodingFixture[0].filteredOutputEncodedBlockHex,
+            fixture.filteredOutputEncodedBlockHex,
         );
 
         // Mark all outputs as spent
-        await transactionOutputRepository.update({}, { isSpent: true });
+        const spentBatch = storageService.createBatch();
+        const allOutpoints: [string, number][] = [];
+        for (const tx of fixture.transactions) {
+            for (const out of tx.outputs) {
+                allOutpoints.push([tx.id, out.vout]);
+            }
+        }
+        await storageService.markOutputsSpent(spentBatch, allOutpoints);
+        await spentBatch.commit();
 
         encodedBlock = await service.getSilentBlockByHash(
-            silentBlockEncodingFixture[0].blockHash,
+            fixture.blockHash,
             true,
         );
 
@@ -115,6 +151,7 @@ describe('SilentBlocksService', () => {
     });
 
     afterEach(async () => {
-        await datasource.destroy();
+        await storageService.onModuleDestroy();
+        fs.rmSync(tmpDir, { recursive: true, force: true });
     });
 });

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CacheModule } from '@nestjs/cache-manager';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { StorageModule } from '@/storage/storage.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
@@ -37,16 +37,7 @@ import { WinstonModuleOptions } from 'nest-winston/dist/winston.interfaces';
             load: [configuration],
             isGlobal: true,
         }),
-        TypeOrmModule.forRootAsync({
-            imports: [ConfigModule],
-            inject: [ConfigService],
-            useFactory: (configService: ConfigService) => ({
-                type: 'sqlite',
-                database: configService.get<string>('db.path'),
-                synchronize: configService.get<boolean>('db.synchronize'),
-                autoLoadEntities: true,
-            }),
-        }),
+        StorageModule,
         TransactionsModule,
         SilentBlocksModule,
         OperationStateModule,

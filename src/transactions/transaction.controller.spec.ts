@@ -2,10 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CacheModule } from '@nestjs/cache-manager';
 import { TransactionController } from '@/transactions/transactions.controller';
 import { TransactionsService } from '@/transactions/transactions.service';
-import { Transaction } from '@/transactions/transaction.entity';
-import { getRepositoryToken } from '@nestjs/typeorm';
+import { StorageService } from '@/storage/storage.service';
+import { TransactionData } from '@/storage/interfaces';
 
-const mockTransactions: Transaction[] = [
+const mockTransactions: TransactionData[] = [
     {
         id: '1',
         blockHeight: 841744,
@@ -21,7 +21,6 @@ const mockTransactions: Transaction[] = [
                 value: 100000,
                 transactionId: '1',
                 isSpent: false,
-                transaction: new Transaction(),
             },
         ],
     },
@@ -40,7 +39,6 @@ const mockTransactions: Transaction[] = [
                 value: 100000,
                 transactionId: '2',
                 isSpent: false,
-                transaction: new Transaction(),
             },
         ],
     },
@@ -59,11 +57,22 @@ const mockTransactions: Transaction[] = [
                 value: 100000,
                 transactionId: '3',
                 isSpent: false,
-                transaction: new Transaction(),
             },
         ],
     },
 ];
+
+const mockStorageService = {
+    getTransactionsByBlockHeight: jest.fn().mockResolvedValue(mockTransactions),
+    getTransactionsByBlockHeightRange: jest
+        .fn()
+        .mockResolvedValue(mockTransactions),
+    getTransactionsByBlockHash: jest.fn().mockResolvedValue(mockTransactions),
+    getTransactionByTxid: jest.fn().mockResolvedValue(mockTransactions[0]),
+    getBlockHeightByTimestamp: jest.fn(),
+    createBatch: jest.fn(),
+    deleteTransactionsByBlockHash: jest.fn(),
+};
 
 describe('TransactionController', () => {
     let controller: TransactionController;
@@ -76,11 +85,8 @@ describe('TransactionController', () => {
             providers: [
                 TransactionsService,
                 {
-                    provide: getRepositoryToken(Transaction),
-                    useValue: {
-                        find: () => mockTransactions,
-                        findOne: () => mockTransactions[0],
-                    },
+                    provide: StorageService,
+                    useValue: mockStorageService,
                 },
             ],
         }).compile();

@@ -20,9 +20,6 @@ class DbConfig {
     @IsNotEmpty()
     @IsString()
     path: string;
-
-    @IsBoolean()
-    synchronize: boolean;
 }
 
 class AxiosRetryConfig {
