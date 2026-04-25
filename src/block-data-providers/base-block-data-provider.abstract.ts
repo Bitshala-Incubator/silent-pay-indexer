@@ -8,9 +8,8 @@ import {
 } from '@/indexer/indexer.service';
 import { ConfigService } from '@nestjs/config';
 import { BlockStateService } from '@/block-state/block-state.service';
-import { BlockState } from '@/block-state/block-state.entity';
-import { EntityManager } from 'typeorm';
-import { OperationState } from '@/operation-state/operation-state.entity';
+import { BatchWriter } from '@/storage/batch-writer';
+import { StorageService } from '@/storage/storage.service';
 
 export abstract class BaseBlockDataProvider<OperationState> {
     protected readonly eventEmitter: EventEmitter2 = new EventEmitter2();
@@ -22,6 +21,7 @@ export abstract class BaseBlockDataProvider<OperationState> {
         private readonly indexerService: IndexerService,
         private readonly operationStateService: OperationStateService,
         protected readonly blockStateService: BlockStateService,
+        protected readonly storageService: StorageService,
     ) {}
 
     async indexTransaction(
@@ -31,16 +31,16 @@ export abstract class BaseBlockDataProvider<OperationState> {
         blockHeight: number,
         blockHash: string,
         blockTime: number,
-        manager: EntityManager,
-    ): Promise<void> {
-        await this.indexerService.index(
+        batch: BatchWriter,
+    ): Promise<Map<string, { pubKey: string; value: number }>> {
+        return this.indexerService.index(
             txid,
             vin,
             vout,
             blockHeight,
             blockHash,
             blockTime,
-            manager,
+            batch,
         );
     }
 
@@ -54,15 +54,15 @@ export abstract class BaseBlockDataProvider<OperationState> {
 
     async setState(
         state: OperationState,
-        blockState: BlockState,
-        manager: EntityManager,
+        blockState: { blockHeight: number; blockHash: string },
+        batch: BatchWriter,
     ): Promise<void> {
-        const operationState = new OperationState();
-        operationState.id = this.operationStateKey;
-        operationState.state = state;
-
-        await manager.save(OperationState, operationState);
-        await manager.save(BlockState, blockState);
+        this.storageService.saveOperationState(
+            batch,
+            this.operationStateKey,
+            state,
+        );
+        this.storageService.saveBlockState(batch, blockState);
     }
 
     abstract getBlockHash(height: number): Promise<string>;
