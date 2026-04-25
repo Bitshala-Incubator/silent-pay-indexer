@@ -16,6 +16,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { DbTransactionService } from '@/db-transaction/db-transaction.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { INDEXED_BLOCK_EVENT } from '@/common/events';
+import { StorageService } from '@/storage/storage.service';
 
 @Injectable()
 export class EsploraProvider
@@ -36,12 +37,14 @@ export class EsploraProvider
         blockStateService: BlockStateService,
         private readonly dbTransactionService: DbTransactionService,
         protected readonly eventEmitter: EventEmitter2,
+        storageService: StorageService,
     ) {
         super(
             configService,
             indexerService,
             operationStateService,
             blockStateService,
+            storageService,
         );
 
         this.batchSize = this.configService.get<number>('esplora.batchSize');
@@ -84,7 +87,7 @@ export class EsploraProvider
                     : 0;
             const blockHash = await this.getBlockHash(blockHeight);
 
-            await this.dbTransactionService.execute(async (manager) => {
+            await this.dbTransactionService.execute(async (batch) => {
                 await this.setState(
                     {
                         currentBlockHeight: 0,
@@ -95,7 +98,7 @@ export class EsploraProvider
                         blockHash,
                         blockHeight,
                     },
-                    manager,
+                    batch,
                 );
             });
         }
@@ -117,7 +120,6 @@ export class EsploraProvider
                 this.logger.log(
                     `No new blocks found. Current tip height: ${tipHeight}`,
                 );
-                this.isSyncing = false;
                 return;
             }
 
@@ -146,17 +148,21 @@ export class EsploraProvider
             i < txids.length;
             i += this.batchSize
         ) {
-            const batch = txids.slice(
+            const txBatch = txids.slice(
                 i,
                 Math.min(i + this.batchSize, txids.length),
             );
 
             try {
-                await this.dbTransactionService.execute(async (manager) => {
+                await this.dbTransactionService.execute(async (batch) => {
                     const spentOutpoints: [string, number][] = [];
+                    const pendingOutputs = new Map<
+                        string,
+                        { pubKey: string; value: number }
+                    >();
 
                     await Promise.all(
-                        batch.map(async (txid) => {
+                        txBatch.map(async (txid) => {
                             const tx = await this.getTx(txid);
                             const vin: TransactionInput[] = tx.vin.map(
                                 (input) => ({
@@ -176,23 +182,26 @@ export class EsploraProvider
                                 value: output.value,
                             }));
 
-                            await this.indexTransaction(
+                            const saved = await this.indexTransaction(
                                 txid,
                                 vin,
                                 vout,
                                 height,
                                 hash,
                                 tx.status.block_time,
-                                manager,
+                                batch,
                             );
+
+                            for (const [k, v] of saved) {
+                                pendingOutputs.set(k, v);
+                            }
                         }, this),
                     );
 
-                    await manager.query(
-                        `UPDATE transaction_output SET isSpent = true WHERE (transactionId, vout) IN (${spentOutpoints
-                            .map(() => '(?,?)')
-                            .join(',')})`,
-                        spentOutpoints.flat(),
+                    await this.storageService.markOutputsSpent(
+                        batch,
+                        spentOutpoints,
+                        pendingOutputs,
                     );
 
                     state.indexedBlockHeight = height;
@@ -203,7 +212,7 @@ export class EsploraProvider
                             blockHeight: height,
                             blockHash: hash,
                         },
-                        manager,
+                        batch,
                     );
                 });
 
@@ -215,7 +224,6 @@ export class EsploraProvider
                 throw error;
             }
         }
-        this.isSyncing = false;
     }
 
     private async getTipHeight(): Promise<number> {

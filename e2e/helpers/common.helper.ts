@@ -27,8 +27,9 @@ export function generateScanTweakAndOutputEntity(
         value: output.value,
     }));
 
-    const { scanTweak, eligibleOutputs } =
-        new IndexerService().deriveOutputsAndComputeScanTweak(txins, txouts);
+    const { scanTweak, eligibleOutputs } = new IndexerService(
+        null,
+    ).deriveOutputsAndComputeScanTweak(txins, txouts);
 
     return [scanTweak.toString('hex'), eligibleOutputs];
 }

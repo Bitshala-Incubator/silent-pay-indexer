@@ -1,109 +1,72 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Transaction } from '@/transactions/transaction.entity';
-import { DeleteResult, Repository, Between } from 'typeorm';
+import { StorageService } from '@/storage/storage.service';
+import { TransactionData } from '@/storage/interfaces';
 
 @Injectable()
 export class TransactionsService {
-    constructor(
-        @InjectRepository(Transaction)
-        private readonly transactionRepository: Repository<Transaction>,
-    ) {}
+    constructor(private readonly storageService: StorageService) {}
 
     async getTransactionByBlockHeight(
         blockHeight: number,
         filterSpent: boolean,
-    ): Promise<Transaction[]> {
-        return this.transactionRepository.find({
-            where: {
-                blockHeight,
-                ...(filterSpent && {
-                    outputs: {
-                        isSpent: false,
-                    },
-                }),
-            },
-            relations: { outputs: true },
-        });
+    ): Promise<TransactionData[]> {
+        return this.storageService.getTransactionsByBlockHeight(
+            blockHeight,
+            filterSpent,
+        );
     }
 
     async getTransactionsByBlockHeightRange(
         startHeight: number,
         endHeight: number,
         filterSpent: boolean,
-    ): Promise<Transaction[]> {
-        return this.transactionRepository.find({
-            where: {
-                blockHeight: Between(startHeight, endHeight),
-                ...(filterSpent && {
-                    outputs: {
-                        isSpent: false,
-                    },
-                }),
-            },
-            relations: { outputs: true },
-            order: {
-                blockHeight: 'ASC',
-            },
-        });
+    ): Promise<TransactionData[]> {
+        return this.storageService.getTransactionsByBlockHeightRange(
+            startHeight,
+            endHeight,
+            filterSpent,
+        );
     }
 
     async getTransactionByBlockHash(
         blockHash: string,
         filterSpent: boolean,
-    ): Promise<Transaction[]> {
-        return this.transactionRepository.find({
-            where: {
-                blockHash,
-                ...(filterSpent && {
-                    outputs: {
-                        isSpent: false,
-                    },
-                }),
-            },
-            relations: { outputs: true },
-        });
+    ): Promise<TransactionData[]> {
+        return this.storageService.getTransactionsByBlockHash(
+            blockHash,
+            filterSpent,
+        );
     }
 
     async getTransactionByTxid(
         txid: string,
         filterSpent: boolean,
-    ): Promise<Transaction | null> {
-        return this.transactionRepository.findOne({
-            where: {
-                id: txid,
-                ...(filterSpent && { outputs: { isSpent: false } }),
-            },
-            relations: { outputs: true },
-        });
+    ): Promise<TransactionData | null> {
+        return this.storageService.getTransactionByTxid(txid, filterSpent);
     }
 
-    async saveTransaction(transaction: Transaction): Promise<Transaction> {
-        return this.transactionRepository.save(transaction);
-    }
-
-    async deleteTransactionByBlockHash(
-        blockHash: string,
-    ): Promise<DeleteResult> {
-        return this.transactionRepository.delete({ blockHash });
+    async deleteTransactionByBlockHash(blockHash: string): Promise<void> {
+        const batch = this.storageService.createBatch();
+        await this.storageService.deleteTransactionsByBlockHash(
+            batch,
+            blockHash,
+        );
+        await batch.commit();
     }
 
     async getBlockHeightByTimestamp(
         timestamp: number,
     ): Promise<{ blockHeight: number }> {
-        const transaction = await this.transactionRepository
-            .createQueryBuilder('transaction')
-            .select('transaction.blockHeight', 'blockHeight')
-            .where('transaction.blockTime > :timestamp', { timestamp })
-            .orderBy('transaction.blockTime', 'ASC')
-            .getRawOne<{ blockHeight: number }>();
+        const blockHeight = await this.storageService.getBlockHeightByTimestamp(
+            timestamp,
+        );
 
-        if (!transaction) {
+        if (blockHeight === null) {
             throw new NotFoundException(
                 'No block found after the given timestamp',
             );
         }
 
-        return transaction;
+        return { blockHeight };
     }
 }
