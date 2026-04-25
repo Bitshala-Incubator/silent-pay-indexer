@@ -1,16 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { Repository } from 'typeorm';
-import { OperationState } from '@/operation-state/operation-state.entity';
-import { InjectRepository } from '@nestjs/typeorm';
+import { StorageService } from '@/storage/storage.service';
+import { OperationStateData } from '@/storage/interfaces';
 
 @Injectable()
 export class OperationStateService {
-    constructor(
-        @InjectRepository(OperationState)
-        private readonly operationStateRepository: Repository<OperationState>,
-    ) {}
+    constructor(private readonly storageService: StorageService) {}
 
-    async getOperationState(id: string): Promise<OperationState> {
-        return this.operationStateRepository.findOneBy({ id: id });
+    async getOperationState(id: string): Promise<OperationStateData> {
+        return this.storageService.getOperationState(id);
     }
 }
