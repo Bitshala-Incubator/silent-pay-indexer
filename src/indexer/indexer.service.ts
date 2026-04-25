@@ -1,9 +1,10 @@
-import { Transaction } from '@/transactions/transaction.entity';
 import { TransactionOutput as TransactionOutputEntity } from '@/transactions/transaction-output.entity';
 import { createTaggedHash, extractPubKeyFromScript } from '@/common/common';
 import { publicKeyCombine, publicKeyTweakMul } from 'secp256k1';
 import { Injectable } from '@nestjs/common';
-import { EntityManager } from 'typeorm';
+import { BatchWriter } from '@/storage/batch-writer';
+import { StorageService } from '@/storage/storage.service';
+import { TransactionData, OutputData } from '@/storage/interfaces';
 
 export type TransactionInput = {
     txid: string; // transaction id
@@ -25,6 +26,8 @@ export type ScanTweakAndOutputs = {
 
 @Injectable()
 export class IndexerService {
+    constructor(private readonly storageService: StorageService) {}
+
     async index(
         txid: string,
         vin: TransactionInput[],
@@ -32,27 +35,32 @@ export class IndexerService {
         blockHeight: number,
         blockHash: string,
         blockTime: number,
-        manager: EntityManager,
-    ): Promise<void> {
+        batch: BatchWriter,
+    ): Promise<Map<string, { pubKey: string; value: number }>> {
         const scanResult = this.deriveOutputsAndComputeScanTweak(vin, vout);
         if (scanResult !== null) {
-            const { scanTweak, eligibleOutputs: outputs } = scanResult;
-            const transaction = new Transaction();
-            transaction.id = txid;
-            transaction.blockHeight = blockHeight;
-            transaction.blockHash = blockHash;
-            transaction.blockTime = blockTime;
-            transaction.scanTweak = scanTweak.toString('hex');
+            const { scanTweak, eligibleOutputs } = scanResult;
 
-            for (const output of outputs) {
-                output.transaction = transaction;
-            }
+            const outputs: OutputData[] = eligibleOutputs.map((out) => ({
+                transactionId: txid,
+                vout: out.vout,
+                pubKey: out.pubKey,
+                value: out.value,
+                isSpent: false,
+            }));
 
-            await manager.save(Transaction, transaction);
-            await manager.save(TransactionOutputEntity, outputs, {
-                chunk: 500,
-            });
+            const transaction: TransactionData = {
+                id: txid,
+                blockHeight,
+                blockHash,
+                blockTime,
+                scanTweak: scanTweak.toString('hex'),
+                outputs,
+            };
+
+            return this.storageService.saveTransaction(batch, transaction);
         }
+        return new Map();
     }
 
     public deriveOutputsAndComputeScanTweak(

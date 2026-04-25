@@ -31,6 +31,7 @@ import { DbTransactionService } from '@/db-transaction/db-transaction.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { INDEXED_BLOCK_EVENT } from '@/common/events';
 import { btcToSats } from '@/common/common';
+import { StorageService } from '@/storage/storage.service';
 
 @Injectable()
 export class BitcoinCoreProvider
@@ -39,7 +40,6 @@ export class BitcoinCoreProvider
 {
     protected readonly logger = new Logger(BitcoinCoreProvider.name);
     protected readonly operationStateKey = 'bitcoincore-operation-state';
-    private readonly updateQueryBatchSize = 300;
     private readonly rpcUrl: string;
     private isSyncing = false;
     private retryConfig: AxiosRetryConfig;
@@ -51,12 +51,14 @@ export class BitcoinCoreProvider
         blockStateService: BlockStateService,
         private readonly dbTransactionService: DbTransactionService,
         protected readonly eventEmitter: EventEmitter2,
+        storageService: StorageService,
     ) {
         super(
             configService,
             indexerService,
             operationStateService,
             blockStateService,
+            storageService,
         );
 
         const { protocol, rpcPort, rpcHost } =
@@ -86,7 +88,7 @@ export class BitcoinCoreProvider
                     : 0;
             const blockHash = await this.getBlockHash(blockHeight);
 
-            await this.dbTransactionService.execute(async (manager) => {
+            await this.dbTransactionService.execute(async (batch) => {
                 await this.setState(
                     {
                         indexedBlockHeight: blockHeight,
@@ -95,7 +97,7 @@ export class BitcoinCoreProvider
                         blockHash,
                         blockHeight,
                     },
-                    manager,
+                    batch,
                 );
             });
         }
@@ -119,7 +121,6 @@ export class BitcoinCoreProvider
                 this.logger.debug(
                     `No new blocks found. Current tip height: ${tipHeight}`,
                 );
-                this.isSyncing = false;
                 return;
             }
 
@@ -133,44 +134,40 @@ export class BitcoinCoreProvider
                 const { transactions, blockHash, blockTime } =
                     await this.processBlock(height, verbosityLevel);
 
-                await this.dbTransactionService.execute(async (manager) => {
+                await this.dbTransactionService.execute(async (batch) => {
                     const spentOutpoints: [string, number][] = [];
+                    const pendingOutputs = new Map<
+                        string,
+                        { pubKey: string; value: number }
+                    >();
 
                     for (const transaction of transactions) {
                         const { txid, vin, vout, blockHeight, blockHash } =
                             transaction;
-                        await this.indexTransaction(
+                        const saved = await this.indexTransaction(
                             txid,
                             vin,
                             vout,
                             blockHeight,
                             blockHash,
                             blockTime,
-                            manager,
+                            batch,
                         );
+
+                        for (const [k, v] of saved) {
+                            pendingOutputs.set(k, v);
+                        }
 
                         for (const input of vin) {
                             spentOutpoints.push([input.txid, input.vout]);
                         }
                     }
 
-                    for (
-                        let i = 0;
-                        i < spentOutpoints.length;
-                        i += this.updateQueryBatchSize
-                    ) {
-                        const batch = spentOutpoints.slice(
-                            i,
-                            i + this.updateQueryBatchSize,
-                        );
-
-                        await manager.query(
-                            `UPDATE transaction_output SET isSpent = true WHERE (transactionId, vout) IN (${batch
-                                .map(() => '(?,?)')
-                                .join(',')})`,
-                            batch.flat(),
-                        );
-                    }
+                    await this.storageService.markOutputsSpent(
+                        batch,
+                        spentOutpoints,
+                        pendingOutputs,
+                    );
 
                     state.indexedBlockHeight = height;
                     await this.setState(
@@ -179,7 +176,7 @@ export class BitcoinCoreProvider
                             blockHash: blockHash,
                             blockHeight: height,
                         },
-                        manager,
+                        batch,
                     );
                 });
 
