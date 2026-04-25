@@ -21,8 +21,9 @@ class DbConfig {
     @IsString()
     path: string;
 
-    @IsBoolean()
-    synchronize: boolean;
+    @IsInt()
+    @Min(1)
+    mapSize: number;
 }
 
 class AxiosRetryConfig {
