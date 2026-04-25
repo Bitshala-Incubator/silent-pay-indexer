@@ -1,61 +1,57 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getDataSourceToken } from '@nestjs/typeorm';
-import { DataSource, QueryRunner } from 'typeorm';
 import { DbTransactionService } from '@/db-transaction/db-transaction.service';
-import { MockDataSource } from '@/db-transaction/db-transaction.mock';
+import { StorageService } from '@/storage/storage.service';
 
 describe('DbTransactionService', () => {
     let service: DbTransactionService;
-    let mockQueryRunner: QueryRunner;
+    let mockCommit: jest.Mock;
 
     beforeEach(async () => {
+        mockCommit = jest.fn().mockResolvedValue(undefined);
+
+        const mockStorageService = {
+            createBatch: jest.fn().mockReturnValue({
+                put: jest.fn().mockReturnThis(),
+                del: jest.fn().mockReturnThis(),
+                commit: mockCommit,
+            }),
+        };
+
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 DbTransactionService,
                 {
-                    provide: getDataSourceToken('default'),
-                    useClass: MockDataSource,
+                    provide: StorageService,
+                    useValue: mockStorageService,
                 },
             ],
         }).compile();
         service = module.get<DbTransactionService>(DbTransactionService);
-        mockQueryRunner = module
-            .get<DataSource>(getDataSourceToken('default'))
-            .createQueryRunner();
     });
 
     it('should be defined', () => {
         expect(service).toBeDefined();
     });
 
-    it('should commit transaction and release query runner on success', async () => {
-        const dummyExecutable = jest.fn();
-        await service.execute(dummyExecutable);
-        expect(mockQueryRunner.connect).toHaveBeenCalledTimes(1);
-        expect(mockQueryRunner.startTransaction).toHaveBeenCalledTimes(1);
+    it('should commit batch on success', async () => {
+        const dummyExecutable = jest.fn().mockResolvedValue('result');
+        const result = await service.execute(dummyExecutable);
+
         expect(dummyExecutable).toHaveBeenCalledTimes(1);
-        expect(dummyExecutable.mock.calls[0][0]).toBe(mockQueryRunner.manager);
-        expect(mockQueryRunner.commitTransaction).toHaveBeenCalledTimes(1);
-        expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalledTimes(0);
-        expect(mockQueryRunner.release).toHaveBeenCalledTimes(1);
+        expect(mockCommit).toHaveBeenCalledTimes(1);
+        expect(result).toBe('result');
     });
 
-    it('should roll back transaction and release query runner on error', async () => {
-        const dummyExecutable = jest.fn();
-        dummyExecutable.mockRejectedValue(new Error('mock error'));
+    it('should discard batch on error (no commit)', async () => {
+        const dummyExecutable = jest
+            .fn()
+            .mockRejectedValue(new Error('mock error'));
+
         await expect(service.execute(dummyExecutable)).rejects.toThrow(
             'mock error',
         );
-        expect(mockQueryRunner.connect).toHaveBeenCalledTimes(1);
-        expect(mockQueryRunner.startTransaction).toHaveBeenCalledTimes(1);
-        expect(dummyExecutable).toHaveBeenCalledTimes(1);
-        expect(dummyExecutable.mock.calls[0][0]).toBe(mockQueryRunner.manager);
-        expect(mockQueryRunner.commitTransaction).toHaveBeenCalledTimes(0);
-        expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalledTimes(1);
-        expect(mockQueryRunner.release).toHaveBeenCalledTimes(1);
-    });
 
-    afterEach(() => {
-        jest.resetAllMocks();
+        expect(dummyExecutable).toHaveBeenCalledTimes(1);
+        expect(mockCommit).toHaveBeenCalledTimes(0);
     });
 });
